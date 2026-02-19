@@ -2,6 +2,7 @@ services:
   - type: web
     name: pharmaguard-backend
     runtime: python
+    runtimeVersion: 3.11
     rootDir: pharmaguard-backend
     buildCommand: pip install -r requirements-deploy.txt
     startCommand: gunicorn -w 4 -b 0.0.0.0:$PORT app.main:app --timeout 120
