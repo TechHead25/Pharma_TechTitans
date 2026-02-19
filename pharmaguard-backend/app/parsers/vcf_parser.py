@@ -8,12 +8,22 @@ class VCFParser:
     def __init__(self, max_size_mb: int = 5):
         self.max_size_bytes = max_size_mb * 1024 * 1024
         self.target_genes = {
-            "CYP2D6", "CYP2C19", "CYP2C9", "SLCO1B1", "TPMT", "DPYD"
+            "CYP2D6", "CYP2C19", "CYP2C9", "VKORC1", "SLCO1B1", "TPMT", "DPYD"
+        }
+        self.rsid_gene_mapping = {
+            "rs9923231": "VKORC1",
+            "rs9934438": "VKORC1",
+            "rs1799853": "CYP2C9",
+            "rs1057910": "CYP2C9",
+            "rs4244285": "CYP2C19",
+            "rs28399504": "CYP2C19",
+            "rs4149056": "SLCO1B1",
         }
         self.gene_drug_mapping = {
             "CYP2D6": ["CODEINE"],
             "CYP2C19": ["WARFARIN", "CLOPIDOGREL"],
             "CYP2C9": ["WARFARIN"],
+            "VKORC1": ["WARFARIN"],
             "SLCO1B1": ["SIMVASTATIN"],
             "TPMT": ["AZATHIOPRINE"],
             "DPYD": ["FLUOROURACIL"],
@@ -78,8 +88,16 @@ class VCFParser:
         # Parse INFO field for GENE, STAR, RS
         info_dict = self._parse_info(info)
         
-        # Only keep variants for target genes
+        rsid = info_dict.get("RS")
+        if not rsid and vid and vid.startswith("rs"):
+            rsid = vid
+
+        # Resolve gene from annotation, fallback to known rsID mapping
         gene = info_dict.get("GENE")
+        if gene not in self.target_genes and rsid:
+            gene = self.rsid_gene_mapping.get(rsid.lower())
+
+        # Only keep variants that map to target genes
         if gene not in self.target_genes:
             return None
         
@@ -93,7 +111,7 @@ class VCFParser:
             "filter": filt,
             "gene": gene,
             "star": info_dict.get("STAR"),
-            "rsid": info_dict.get("RS"),
+            "rsid": rsid,
             "info": info_dict,
         }
     
