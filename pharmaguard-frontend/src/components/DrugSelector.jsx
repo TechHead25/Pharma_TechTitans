@@ -6,19 +6,32 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   // Fetch available drugs from API
   useEffect(() => {
     const fetchDrugs = async () => {
       try {
+        setLoading(true);
         const response = await fetch('http://localhost:8000/api/v1/drugs');
-        if (!response.ok) throw new Error('Failed to fetch drugs');
+        if (!response.ok) {
+          throw new Error(`Failed to fetch drugs: ${response.status}`);
+        }
         const data = await response.json();
-        setDrugs(data.drugs || []);
+        console.log('Drugs API response:', data);
+        
+        // Extract drugs array from response
+        const drugsList = Array.isArray(data.drugs) ? data.drugs : [];
+        console.log('Extracted drugs list:', drugsList);
+        
+        setDrugs(drugsList);
         setError(null);
       } catch (err) {
         console.error('Error fetching drugs:', err);
-        setError('Error loading medications');
+        setError(`Error loading medications: ${err.message}`);
+        setDrugs([]);  // Set empty array on error
+      } finally {
+        setLoading(false);
       }
     };
     fetchDrugs();
@@ -26,9 +39,9 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
 
   // Filter drugs based on search
   const filteredDrugs = drugs.filter(drug =>
-    drug.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    drug.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    drug.category.toLowerCase().includes(searchTerm.toLowerCase())
+    (drug.name && drug.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (drug.id && drug.id.toLowerCase().includes(searchTerm.toLowerCase())) ||
+    (drug.category && drug.category.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const handleDrugToggle = (drugId) => {
@@ -71,17 +84,18 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
       {/* Main dropdown button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        disabled={isLoading}
+        disabled={isLoading || loading}
         className={`w-full px-4 py-3 text-left border-2 rounded-lg font-medium transition-all
           ${selectedDrugs.length > 0
             ? 'border-green-500 bg-green-50 text-gray-800' 
             : 'border-gray-300 bg-white text-gray-600 hover:border-green-400'}
-          ${isLoading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+          ${isLoading || loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
           flex items-center justify-between
         `}
       >
         <span>
-          {selectedDrugs.length === 0 
+          {loading ? 'Loading medications...' :
+           selectedDrugs.length === 0 
             ? 'Choose medications...' 
             : `${selectedDrugs.length} selected`}
         </span>
@@ -92,7 +106,7 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
       </button>
 
       {/* Dropdown menu */}
-      {isOpen && (
+      {isOpen && !loading && (
         <div className="absolute top-full left-0 right-0 mt-2 bg-white border-2 border-gray-300 rounded-lg shadow-lg z-50" style={{maxWidth: '500px'}}>
           {/* Search input */}
           <div className="p-3 border-b border-gray-200">
@@ -108,7 +122,12 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
 
           {/* Drug list */}
           <div className="max-h-96 overflow-y-auto">
-            {filteredDrugs.length > 0 ? (
+            {drugs.length === 0 ? (
+              <div className="px-4 py-6 text-center text-gray-500">
+                <p className="mb-2">No medications available</p>
+                <p className="text-xs">Check backend connection</p>
+              </div>
+            ) : filteredDrugs.length > 0 ? (
               filteredDrugs.map((drug) => (
                 <label
                   key={drug.id}
@@ -128,22 +147,27 @@ export default function DrugSelector({ selectedDrugs, onDrugsChange, isLoading }
                     <div className="font-medium text-gray-800">{drug.name}</div>
                     <div className="text-xs text-gray-600">{drug.category}</div>
                     <div className="text-xs text-gray-500 mt-1">
-                      Genes: {drug.genes.join(', ')} • {drug.description}
+                      Genes: {Array.isArray(drug.genes) ? drug.genes.join(', ') : drug.genes} • {drug.description}
                     </div>
                   </div>
                 </label>
               ))
             ) : (
               <div className="px-4 py-3 text-gray-500 text-center">
-                No medications found
+                No medications match "{searchTerm}"
               </div>
             )}
+          </div>
+          
+          {/* Show total count */}
+          <div className="px-4 py-2 bg-gray-50 text-xs text-gray-600 border-t border-gray-200">
+            Showing {filteredDrugs.length} of {drugs.length} medications
           </div>
         </div>
       )}
 
       {error && (
-        <p className="text-xs text-orange-600 mt-2">{error}</p>
+        <p className="text-xs text-red-600 mt-2">⚠️ {error}</p>
       )}
 
       {/* Info text */}
