@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FiMail, FiLock, FiUser, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
 import { useNavigate, Link } from 'react-router-dom';
+import appLogo from '../assets/applogo.png';
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -139,7 +140,7 @@ export default function Register() {
 
   if (requiresVerification && !success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4 py-8">
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4 py-8">
         <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
           <h2 className="text-2xl font-bold text-gray-800 mb-3 text-center">Verify Your Email</h2>
           <p className="text-gray-600 text-sm mb-4 text-center">Enter the 6-digit verification code sent to {registeredEmail}</p>
@@ -159,7 +160,7 @@ export default function Register() {
               type="text"
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500"
+              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
               placeholder="Enter 6-digit code"
               required
               disabled={isLoading}
@@ -168,7 +169,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold py-2.5 px-4 rounded-lg disabled:opacity-60"
+              className="w-full bg-gradient-to-r from-sky-700 to-cyan-700 text-white font-bold py-2.5 px-4 rounded-lg disabled:opacity-60"
             >
               {isLoading ? 'Verifying...' : 'Verify Email'}
             </button>
@@ -177,7 +178,7 @@ export default function Register() {
           <button
             onClick={handleResendCode}
             disabled={isLoading}
-            className="w-full mt-3 text-indigo-600 hover:text-indigo-700 text-sm font-semibold"
+            className="w-full mt-3 text-sky-700 hover:text-sky-800 text-sm font-semibold"
           >
             Resend verification code
           </button>
@@ -188,7 +189,7 @@ export default function Register() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4">
+      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4">
         <div className="w-full max-w-md">
           <div className="bg-white rounded-xl shadow-lg p-8 text-center">
             <FiCheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
@@ -201,11 +202,16 @@ export default function Register() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center px-4 py-8">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4 py-8">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-600 mb-2">PharmaGuard</h1>
+          <img
+            src={appLogo}
+            alt="PharmaGuard Logo"
+            className="w-20 h-20 object-cover rounded-xl mx-auto mb-4 shadow-md"
+          />
+          <h1 className="text-4xl font-bold text-sky-700 mb-2">PharmaGuard</h1>
           <p className="text-gray-600">Pharmacogenomic Risk Assessment Platform</p>
         </div>
 
@@ -233,7 +239,7 @@ export default function Register() {
                   name="full_name"
                   value={formData.full_name}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 transition"
                   placeholder="John Doe"
                   required
                   disabled={isLoading}
@@ -251,7 +257,7 @@ export default function Register() {
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 transition"
                   placeholder="your@email.com"
                   required
                   disabled={isLoading}
@@ -269,7 +275,7 @@ export default function Register() {
                   name="username"
                   value={formData.username}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 transition"
                   placeholder="username"
                   required
                   disabled={isLoading}
@@ -287,7 +293,7 @@ export default function Register() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 transition"
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
@@ -306,7 +312,7 @@ export default function Register() {
                   name="confirm_password"
                   value={formData.confirm_password}
                   onChange={handleChange}
-                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 transition"
+                  className="w-full pl-10 pr-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500 transition"
                   placeholder="••••••••"
                   required
                   disabled={isLoading}
@@ -318,7 +324,7 @@ export default function Register() {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed mt-6"
+              className="w-full bg-gradient-to-r from-sky-700 to-cyan-700 hover:from-sky-800 hover:to-cyan-800 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold py-2.5 px-4 rounded-lg transition-all shadow-md hover:shadow-lg disabled:cursor-not-allowed mt-6"
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </button>
@@ -328,7 +334,7 @@ export default function Register() {
           <div className="text-center mt-6 pt-6 border-t border-gray-200">
             <p className="text-gray-600 text-sm">
               Already have an account?{' '}
-              <Link to="/login" className="text-indigo-600 hover:text-indigo-700 font-semibold">
+              <Link to="/login" className="text-sky-700 hover:text-sky-800 font-semibold">
                 Login here
               </Link>
             </p>

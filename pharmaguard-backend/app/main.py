@@ -274,7 +274,14 @@ DRUGS_DATABASE = {
     },
 }
 
-SUPPORTED_DRUGS = list(DRUGS_DATABASE.keys())
+SUPPORTED_DRUGS = [
+    "CODEINE",
+    "WARFARIN",
+    "CLOPIDOGREL",
+    "SIMVASTATIN",
+    "AZATHIOPRINE",
+    "FLUOROURACIL",
+]
 
 # In-memory storage for results (in production, use database)
 analysis_results = {}
@@ -299,6 +306,7 @@ async def get_supported_drugs():
             **drug_info
         }
         for drug_id, drug_info in DRUGS_DATABASE.items()
+        if drug_id in SUPPORTED_DRUGS
     ]
     return {
         "drugs": drugs_list,
@@ -308,7 +316,11 @@ async def get_supported_drugs():
 
 
 @app.post("/api/v1/analyze-vcf")
-async def analyze_vcf(file: UploadFile = File(...), drug: str = Query(...)):
+async def analyze_vcf(
+    file: UploadFile = File(...),
+    drug: str = Query(...),
+    dosage_mg: Optional[float] = Query(None, ge=0)
+):
     """
     Upload and analyze VCF file with pre-selected drug(s)
     
@@ -320,16 +332,21 @@ async def analyze_vcf(file: UploadFile = File(...), drug: str = Query(...)):
         Analysis results in PharmaGuardResponse format or list of results for multiple drugs
     """
     
-    # Parse drugs (support both single and comma-separated)
-    drug_list = [d.strip().upper() for d in drug.split(",")]
-    
-    # Validate drug selections
-    invalid_drugs = [d for d in drug_list if d not in SUPPORTED_DRUGS]
-    if invalid_drugs:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Invalid drugs: {', '.join(invalid_drugs)}. Supported: {', '.join(SUPPORTED_DRUGS[:6])}..."
-        )
+    # Parse drugs (support known list + free-text custom drugs)
+    raw_drugs = [d.strip() for d in drug.split(",") if d.strip()]
+    if not raw_drugs:
+        raise HTTPException(status_code=400, detail="At least one drug is required")
+
+    # Normalize: known drugs as uppercase IDs, custom drugs as title-case labels
+    drug_list = []
+    for raw_drug in raw_drugs:
+        upper_drug = raw_drug.upper()
+        if upper_drug in SUPPORTED_DRUGS:
+            normalized_drug = upper_drug
+        else:
+            normalized_drug = " ".join(raw_drug.split()).title()
+        if normalized_drug:
+            drug_list.append(normalized_drug)
     
     # Remove duplicates while preserving order
     drug_list = list(dict.fromkeys(drug_list))
@@ -395,14 +412,14 @@ async def analyze_vcf(file: UploadFile = File(...), drug: str = Query(...)):
             results = []
             for drug_choice in drug_list:
                 result = analyze_single_drug(
-                    patient_id, drug_choice, variants, parsed_data, file.filename
+                    patient_id, drug_choice, variants, parsed_data, file.filename, dosage_mg
                 )
                 results.append(result)
             return {"analyses": results, "patient_id": patient_id, "drug_count": len(results)}
         else:
             # Single drug analysis
             return analyze_single_drug(
-                patient_id, drug_list[0], variants, parsed_data, file.filename
+                patient_id, drug_list[0], variants, parsed_data, file.filename, dosage_mg
             )
     
     except HTTPException:
@@ -411,21 +428,30 @@ async def analyze_vcf(file: UploadFile = File(...), drug: str = Query(...)):
         raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 
-def analyze_single_drug(patient_id: str, drug: str, variants: list, parsed_data: dict, filename: str):
+def analyze_single_drug(
+    patient_id: str,
+    drug: str,
+    variants: list,
+    parsed_data: dict,
+    filename: str,
+    dosage_mg: Optional[float] = None
+):
     """Analyze VCF for a single drug"""
     
     # Drug to gene mapping
     drug_gene_mapping = {drug_id: info["genes"] for drug_id, info in DRUGS_DATABASE.items()}
     
-    # Get relevant genes for this drug
-    relevant_genes = drug_gene_mapping.get(drug, [])
+    # Get relevant genes for this drug (custom drugs fall back to all key pharmacogenes)
+    relevant_genes = drug_gene_mapping.get(drug)
+    if not relevant_genes:
+        relevant_genes = ["CYP2D6", "CYP2C19", "CYP2C9", "SLCO1B1", "TPMT", "DPYD", "VKORC1"]
     
     # Filter variants to relevant genes only
     relevant_variants = [v for v in variants if v.get('gene') in relevant_genes]
     
     # If no relevant variants found
     if not relevant_variants:
-        return create_no_variants_response(patient_id, drug, variants)
+        return create_no_variants_response(patient_id, drug, variants, dosage_mg)
     
     # Prioritize genes for better drug-specific interpretation
     gene_priority = {
@@ -441,7 +467,10 @@ def analyze_single_drug(patient_id: str, drug: str, variants: list, parsed_data:
     gene = sorted_variants[0].get('gene')
     
     # Extract variant data
-    variant_rsids = [v.get('rsid') or f"chr{v.get('chrom')}_{v.get('pos')}" for v in sorted_variants]
+    variant_rsids = [
+        (str(v.get('rsid')).strip() if v.get('rsid') else f"chr{v.get('chrom')}_{v.get('pos')}")
+        for v in sorted_variants
+    ]
     star_allele = sorted_variants[0].get('star') or '*1'
     diplotype = f"{star_allele}/{star_allele}"
     
@@ -479,8 +508,18 @@ def analyze_single_drug(patient_id: str, drug: str, variants: list, parsed_data:
         risk_label=risk['risk_label'],
         detected_variants=variant_rsids,
         diplotype=diplotype,
+        current_dose_mg=dosage_mg,
         api_key=os.getenv("OPENAI_API_KEY")
     )
+
+    dosage_note = ""
+    if dosage_mg is not None:
+        if risk['risk_label'] in ["Adjust Dosage", "Toxic"]:
+            dosage_note = f" Current reported dose: {dosage_mg} mg; genotype-guided dose reduction or alternative therapy should be considered."
+        elif risk['risk_label'] == "Safe":
+            dosage_note = f" Current reported dose: {dosage_mg} mg; standard dosing is generally acceptable with routine monitoring."
+        else:
+            dosage_note = f" Current reported dose: {dosage_mg} mg; individualized dose titration is recommended due to uncertain pharmacogenomic impact."
     
     # Create response
     response = PharmaGuardResponse(
@@ -500,7 +539,7 @@ def analyze_single_drug(patient_id: str, drug: str, variants: list, parsed_data:
         ),
         clinical_recommendation=risk_engine.get_clinical_recommendation(
             risk['risk_label'], drug, phenotype
-        ),
+        ) + dosage_note,
         llm_generated_explanation=LLMGeneratedExplanation(
             clinical_summary=clinical_summary,
             patient_summary=patient_summary
@@ -520,7 +559,12 @@ def analyze_single_drug(patient_id: str, drug: str, variants: list, parsed_data:
     return response
 
 
-def create_no_variants_response(patient_id: str, drug: str, variants: list):
+def create_no_variants_response(
+    patient_id: str,
+    drug: str,
+    variants: list,
+    dosage_mg: Optional[float] = None
+):
     """Create a safe response when no target variants found"""
     return PharmaGuardResponse(
         patient_id=patient_id,
@@ -537,7 +581,10 @@ def create_no_variants_response(patient_id: str, drug: str, variants: list):
             phenotype="Unknown",
             detected_variants=[]
         ),
-        clinical_recommendation=f"No significant pharmacogenomic variants detected for {drug}. Standard drug dosing recommended.",
+        clinical_recommendation=(
+            f"No significant pharmacogenomic variants detected for {drug}. Standard drug dosing recommended."
+            + (f" Current reported dose: {dosage_mg} mg." if dosage_mg is not None else "")
+        ),
         llm_generated_explanation=LLMGeneratedExplanation(
             clinical_summary=f"Patient VCF does not contain variants in genes related to {drug} metabolism. Pharmacogenomic profile is typical. Standard dosing protocols are appropriate. Regular clinical monitoring recommended as with all medications.",
             patient_summary=f"Your genetic test shows you process {drug} normally, just like most people. Your doctor can prescribe the standard dose with confidence. All the normal safety studies apply to you!"

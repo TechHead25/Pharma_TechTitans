@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiUsers, FiFileText, FiCheckCircle, FiXCircle, FiBarChart2, FiLogOut } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import appLogo from '../assets/applogo.png';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-700 mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Loading dashboard...</p>
         </div>
       </div>
@@ -80,12 +81,19 @@ export default function AdminDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+      <header className="bg-gradient-to-r from-sky-800 to-cyan-700 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center space-x-4">
+              <img
+                src={appLogo}
+                alt="PharmaGuard Logo"
+                className="w-12 h-12 object-cover rounded-lg shadow-md"
+              />
+              <div>
               <h1 className="text-3xl font-bold">PharmaGuard Admin Dashboard</h1>
-              <p className="text-indigo-100">Welcome, {user.full_name}</p>
+              <p className="text-sky-100">Welcome, {user.full_name}</p>
+              </div>
             </div>
             <button
               onClick={handleLogout}
@@ -114,7 +122,7 @@ export default function AdminDashboard() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`py-4 px-3 border-b-2 font-medium text-sm flex items-center space-x-2 ${
                     activeTab === tab.id
-                      ? 'border-indigo-500 text-indigo-600'
+                      ? 'border-sky-600 text-sky-700'
                       : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
                 >
@@ -156,7 +164,7 @@ export default function AdminDashboard() {
                     <p className="text-gray-500 text-sm font-medium">Total Analyses</p>
                     <p className="text-3xl font-bold text-gray-800 mt-2">{stats.total_analyses}</p>
                   </div>
-                  <FiFileText className="w-12 h-12 text-purple-500 opacity-20" />
+                  <FiFileText className="w-12 h-12 text-cyan-600 opacity-20" />
                 </div>
               </div>
 
@@ -189,7 +197,7 @@ export default function AdminDashboard() {
                   stats.most_analyzed_drugs.map((drug, idx) => (
                     <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                       <span className="font-medium text-gray-700">{drug.drugs}</span>
-                      <span className="text-indigo-600 font-bold">{drug.count} analyses</span>
+                      <span className="text-sky-700 font-bold">{drug.count} analyses</span>
                     </div>
                   ))
                 ) : (
@@ -276,13 +284,13 @@ export default function AdminDashboard() {
                           <td className="py-3 px-4">
                             <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
                               u.is_admin
-                                ? 'bg-purple-100 text-purple-800'
+                                ? 'bg-cyan-100 text-cyan-800'
                                 : 'bg-gray-100 text-gray-800'
                             }`}>
                               {u.is_admin ? 'Admin' : 'User'}
                             </span>
                           </td>
-                          <td className="py-3 px-4 font-semibold text-indigo-600">{u.analysis_count}</td>
+                          <td className="py-3 px-4 font-semibold text-sky-700">{u.analysis_count}</td>
                           <td className="py-3 px-4 text-gray-600 text-sm">
                             {new Date(u.created_at).toLocaleDateString()}
                           </td>

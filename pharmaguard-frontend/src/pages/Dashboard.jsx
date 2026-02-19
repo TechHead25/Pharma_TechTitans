@@ -4,10 +4,13 @@ import { useNavigate } from 'react-router-dom';
 import DrugSelector from '../components/DrugSelector';
 import VCFUploader from '../components/VCFUploader';
 import ResultsDisplay from '../components/ResultsDisplay';
+import appLogo from '../assets/applogo.png';
 import '../index.css';
 
 function Dashboard() {
   const [selectedDrugs, setSelectedDrugs] = useState([]);
+  const [otherDrugsText, setOtherDrugsText] = useState('');
+  const [dosageMg, setDosageMg] = useState('');
   const [file, setFile] = useState(null);
   const [results, setResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -31,8 +34,14 @@ function Dashboard() {
 
   // Handle file upload and analysis
   const handleAnalyze = async () => {
-    if (!file || selectedDrugs.length === 0) {
-      setError('Please select at least one medication and upload a VCF file');
+    const customDrugs = otherDrugsText
+      .split(',')
+      .map((drug) => drug.trim())
+      .filter(Boolean);
+    const allDrugs = [...new Set([...selectedDrugs, ...customDrugs])];
+
+    if (!file || allDrugs.length === 0) {
+      setError('Please select at least one medication (or enter custom drug names) and upload a VCF file');
       return;
     }
 
@@ -43,8 +52,13 @@ function Dashboard() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const drugsParam = selectedDrugs.join(',');
-      const response = await fetch(`http://localhost:8000/api/v1/analyze-vcf?drug=${drugsParam}`, {
+      const drugsParam = allDrugs.join(',');
+      const query = new URLSearchParams({ drug: drugsParam });
+      if (dosageMg !== '' && !Number.isNaN(Number(dosageMg))) {
+        query.set('dosage_mg', String(Number(dosageMg)));
+      }
+
+      const response = await fetch(`http://localhost:8000/api/v1/analyze-vcf?${query.toString()}`, {
         method: 'POST',
         body: formData,
       });
@@ -113,6 +127,8 @@ function Dashboard() {
   // Handle restart
   const handleRestart = () => {
     setSelectedDrugs([]);
+    setOtherDrugsText('');
+    setDosageMg('');
     setFile(null);
     setResults(null);
     setError(null);
@@ -121,6 +137,8 @@ function Dashboard() {
 
   const handleChangeDrug = () => {
     setSelectedDrugs([]);
+    setOtherDrugsText('');
+    setDosageMg('');
     setFile(null);
     setResults(null);
     setError(null);
@@ -134,25 +152,32 @@ function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50">
       {/* Header with user menu */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+      <header className="bg-gradient-to-r from-sky-800 to-cyan-700 text-white shadow-lg">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center space-x-4">
+              <img
+                src={appLogo}
+                alt="PharmaGuard Logo"
+                className="w-12 h-12 object-cover rounded-lg shadow-md"
+              />
+              <div>
               <h1 className="text-4xl font-bold">PharmaGuard</h1>
-              <p className="text-indigo-100 text-sm mt-1">Pharmacogenomic Risk Assessment Platform</p>
+              <p className="text-sky-100 text-sm mt-1">Pharmacogenomic Risk Assessment Platform</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
               <div className="text-right">
-                <p className="text-indigo-100 text-sm">Welcome, {user.full_name}</p>
-                <p className="text-indigo-200 text-xs mt-1">v2.0 • Multi-Drug Analysis</p>
+                <p className="text-sky-100 text-sm">Welcome, {user.full_name}</p>
+                <p className="text-sky-200 text-xs mt-1">v2.0 • Multi-Drug Analysis</p>
               </div>
               <div className="flex items-center space-x-2">
                 {user.is_admin && (
                   <button
                     onClick={() => navigate('/admin')}
-                    className="flex items-center space-x-2 bg-indigo-500 hover:bg-indigo-600 px-3 py-2 rounded-lg transition text-sm"
+                    className="flex items-center space-x-2 bg-sky-600 hover:bg-sky-700 px-3 py-2 rounded-lg transition text-sm"
                     title="Admin Dashboard"
                   >
                     <FiSettings size={18} />
@@ -161,7 +186,7 @@ function Dashboard() {
                 )}
                 <button
                   onClick={() => navigate('/visualizations')}
-                  className="flex items-center space-x-2 bg-purple-500 hover:bg-purple-600 px-3 py-2 rounded-lg transition text-sm"
+                  className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-700 px-3 py-2 rounded-lg transition text-sm"
                   title="Analytics"
                 >
                   <FiBarChart2 size={18} />
@@ -188,7 +213,7 @@ function Dashboard() {
           <div className="flex items-center justify-between mb-4">
             <div className={`flex items-center space-x-3 ${stage === 'drug-selection' ? 'opacity-100' : 'opacity-60'}`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
-                stage === 'drug-selection' ? 'bg-indigo-600' : 'bg-green-600'
+                stage === 'drug-selection' ? 'bg-sky-700' : 'bg-green-600'
               }`}>
                 {stage !== 'drug-selection' ? '✓' : '1'}
               </div>
@@ -200,7 +225,7 @@ function Dashboard() {
             <div className={`flex items-center space-x-3 ${stage === 'file-upload' || stage === 'results' ? 'opacity-100' : 'opacity-60'}`}>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-white ${
                 stage === 'results' ? 'bg-green-600' :
-                stage === 'file-upload' ? 'bg-indigo-600' : 'bg-gray-300'
+                stage === 'file-upload' ? 'bg-sky-700' : 'bg-gray-300'
               }`}>
                 {stage === 'results' ? '✓' : '2'}
               </div>
@@ -240,17 +265,50 @@ function Dashboard() {
               onDrugsChange={handleDrugChange}
               isLoading={isLoading}
             />
+            <div className="mt-5">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Other Drugs (free text, comma-separated)
+              </label>
+              <input
+                type="text"
+                value={otherDrugsText}
+                onChange={(e) => setOtherDrugsText(e.target.value)}
+                placeholder="e.g., Metformin, Tacrolimus"
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                Add medications outside the predefined list to receive exploratory pharmacogenomic outcomes.
+              </p>
+            </div>
+
+            <div className="mt-4">
+              <label className="block text-sm font-semibold text-gray-700 mb-2">
+                Current Dose Intake (mg)
+              </label>
+              <input
+                type="number"
+                min="0"
+                step="0.1"
+                value={dosageMg}
+                onChange={(e) => setDosageMg(e.target.value)}
+                placeholder="e.g., 5"
+                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
+              />
+              <p className="text-xs text-gray-500 mt-1">
+                This will be used by the AI to suggest whether dose maintenance or adjustment is appropriate.
+              </p>
+            </div>
             <p className="text-gray-600 text-sm mt-6 bg-blue-50 p-4 rounded-lg">
               💡 <strong>Tip:</strong> Select one or more medications you're taking or considering. Our analysis will check for genetic interactions with each drug.
             </p>
             
             {/* Continue button - only enabled when drugs are selected */}
-            {selectedDrugs.length > 0 && (
+            {(selectedDrugs.length > 0 || otherDrugsText.trim().length > 0) && (
               <button
                 onClick={() => setStage('file-upload')}
-                className="mt-6 w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                className="mt-6 w-full bg-gradient-to-r from-sky-700 to-cyan-700 hover:from-sky-800 hover:to-cyan-800 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
               >
-                Continue with Selected Medications ({selectedDrugs.length})
+                Continue with Selected Medications
               </button>
             )}
           </div>
@@ -263,13 +321,18 @@ function Dashboard() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">Step 2: Upload Your VCF File</h2>
                 <p className="text-gray-600 text-sm mt-2">
-                  Selected medications: <span className="font-semibold text-indigo-600">{selectedDrugs.join(', ')}</span>
+                  Selected medications: <span className="font-semibold text-sky-700">{[...selectedDrugs, ...otherDrugsText.split(',').map((d) => d.trim()).filter(Boolean)].join(', ')}</span>
                 </p>
+                {dosageMg !== '' && (
+                  <p className="text-gray-600 text-sm mt-1">
+                    Reported dose: <span className="font-semibold text-sky-700">{dosageMg} mg</span>
+                  </p>
+                )}
               </div>
               {selectedDrugs.length > 0 && (
                 <button
                   onClick={handleChangeDrug}
-                  className="text-indigo-600 hover:text-indigo-800 font-semibold text-sm underline"
+                  className="text-sky-700 hover:text-sky-900 font-semibold text-sm underline"
                 >
                   Change medications
                 </button>
@@ -285,7 +348,7 @@ function Dashboard() {
             {file && !isLoading && stage !== 'results' && (
               <button
                 onClick={handleAnalyze}
-                className="mt-6 w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
+                className="mt-6 w-full bg-gradient-to-r from-sky-700 to-cyan-700 hover:from-sky-800 hover:to-cyan-800 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
               >
                 Analyze Pharmacogenomic Profile
               </button>
@@ -293,7 +356,7 @@ function Dashboard() {
 
             {isLoading && (
               <div className="mt-6 text-center">
-                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-4"></div>
+                <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-sky-700 mb-4"></div>
                 <p className="text-gray-600 font-semibold">Processing your VCF file...</p>
               </div>
             )}
@@ -310,7 +373,7 @@ function Dashboard() {
               </div>
               <button
                 onClick={handleRestart}
-                className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
+                className="bg-sky-700 hover:bg-sky-800 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm"
               >
                 New Analysis
               </button>
@@ -320,8 +383,8 @@ function Dashboard() {
             {results.analyses ? (
               <div className="grid grid-cols-1 gap-6">
                 {results.analyses.map((analysis, idx) => (
-                  <div key={idx} className="border-l-4 border-indigo-500 pl-4 pt-4">
-                    <h3 className="text-lg font-semibold text-indigo-600 mb-4">
+                  <div key={idx} className="border-l-4 border-sky-600 pl-4 pt-4">
+                    <h3 className="text-lg font-semibold text-sky-700 mb-4">
                       {analysis.drug} Analysis
                     </h3>
                     <ResultsDisplay assessment={analysis} isLoading={false} />
@@ -335,12 +398,12 @@ function Dashboard() {
         )}
 
         {/* Footer info */}
-        <div className="mt-12 p-6 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
-          <h3 className="font-bold text-indigo-900 mb-2">About PharmaGuard</h3>
-          <p className="text-indigo-800 text-sm mb-3">
+        <div className="mt-12 p-6 bg-sky-50 rounded-lg border-l-4 border-sky-600">
+          <h3 className="font-bold text-sky-900 mb-2">About PharmaGuard</h3>
+          <p className="text-sky-800 text-sm mb-3">
             PharmaGuard uses AI-powered pharmacogenomic analysis aligned with CPIC (Clinical Pharmacogenetics Implementation Consortium) guidelines. Our dual-layer explanations provide both technical insights for healthcare professionals and simple explanations for patients.
           </p>
-          <p className="text-indigo-800 text-sm">
+          <p className="text-sky-800 text-sm">
             <strong>Disclaimer:</strong> This tool is for informational purposes only and should not replace professional medical advice. Always consult with your healthcare provider before making medication decisions.
           </p>
         </div>

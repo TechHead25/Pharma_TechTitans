@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FiLogOut, FiBarChart2, FiTrendingUp } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
+import appLogo from '../assets/applogo.png';
 
 export default function DataVisualizationDashboard() {
   const [userRecords, setUserRecords] = useState([]);
@@ -93,7 +94,7 @@ export default function DataVisualizationDashboard() {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-sky-700 mx-auto mb-4"></div>
           <p className="text-gray-600 font-semibold">Loading your analysis data...</p>
         </div>
       </div>
@@ -103,15 +104,22 @@ export default function DataVisualizationDashboard() {
   return (
     <div className="min-h-screen bg-gray-100">
       {/* Header */}
-      <header className="bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-lg">
+      <header className="bg-gradient-to-r from-sky-800 to-cyan-700 text-white shadow-lg">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
+            <div className="flex items-center space-x-4">
+              <img
+                src={appLogo}
+                alt="PharmaGuard Logo"
+                className="w-12 h-12 object-cover rounded-lg shadow-md"
+              />
+              <div>
               <h1 className="text-3xl font-bold">Your Analysis Dashboard</h1>
-              <p className="text-indigo-100">Data Visualization & Insights</p>
+              <p className="text-sky-100">Data Visualization & Insights</p>
+              </div>
             </div>
             <div className="flex items-center space-x-4">
-              <span className="text-indigo-100">{user.full_name}</span>
+              <span className="text-sky-100">{user.full_name}</span>
               <button
                 onClick={handleLogout}
                 className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg transition"
@@ -168,9 +176,9 @@ export default function DataVisualizationDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-gray-500 text-sm font-medium">Success Rate</p>
-                <p className="text-4xl font-bold text-indigo-600 mt-2">{successRate}%</p>
+                <p className="text-4xl font-bold text-sky-700 mt-2">{successRate}%</p>
               </div>
-              <FiTrendingUp className="w-12 h-12 text-indigo-500 opacity-20" />
+              <FiTrendingUp className="w-12 h-12 text-sky-600 opacity-20" />
             </div>
           </div>
         </div>
@@ -184,15 +192,15 @@ export default function DataVisualizationDashboard() {
                 topDrugs.map(([drug, count], idx) => (
                   <div key={idx} className="flex items-center justify-between">
                     <div className="flex items-center space-x-3 flex-1">
-                      <div className="flex-shrink-0 w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                        <span className="text-indigo-700 font-bold">{idx + 1}</span>
+                      <div className="flex-shrink-0 w-8 h-8 bg-sky-100 rounded-full flex items-center justify-center">
+                        <span className="text-sky-700 font-bold">{idx + 1}</span>
                       </div>
                       <span className="text-gray-700 font-medium">{drug}</span>
                     </div>
                     <div className="flex items-center space-x-2">
                       <div className="w-32 h-2 bg-gray-200 rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-indigo-600"
+                          className="h-full bg-sky-700"
                           style={{
                             width: `${(count / (topDrugs[0]?.[1] || 1)) * 100}%`
                           }}
@@ -300,7 +308,7 @@ export default function DataVisualizationDashboard() {
                           <button
                             onClick={() => handleViewVcf(record)}
                             disabled={loadingVcfId === record.id}
-                            className="text-indigo-600 hover:text-indigo-800 text-sm font-semibold underline disabled:text-gray-400 disabled:no-underline"
+                            className="text-sky-700 hover:text-sky-900 text-sm font-semibold underline disabled:text-gray-400 disabled:no-underline"
                           >
                             {loadingVcfId === record.id ? 'Loading...' : 'View VCF'}
                           </button>
@@ -341,7 +349,7 @@ export default function DataVisualizationDashboard() {
         <div className="mt-8 text-center">
           <a
             href="/dashboard"
-            className="inline-block bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg"
+            className="inline-block bg-gradient-to-r from-sky-700 to-cyan-700 hover:from-sky-800 hover:to-cyan-800 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg"
           >
             Back to Analysis
           </a>

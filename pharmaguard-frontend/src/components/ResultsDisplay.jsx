@@ -52,6 +52,8 @@ export function ResultCard({ assessment }) {
   const [expandedSummary, setExpandedSummary] = useState('clinical');
   const [copiedSection, setCopiedSection] = useState(null);
 
+  const rawJson = JSON.stringify(assessment, null, 2);
+
   const copyToClipboard = (text, section) => {
     navigator.clipboard.writeText(text);
     setCopiedSection(section);
@@ -59,7 +61,7 @@ export function ResultCard({ assessment }) {
   };
 
   const downloadJSON = () => {
-    const dataStr = JSON.stringify(assessment, null, 2);
+    const dataStr = rawJson;
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -79,7 +81,7 @@ export function ResultCard({ assessment }) {
   return (
     <div className={`${severityColor} border-2 border-gray-200 rounded-xl overflow-hidden shadow-lg`}>
       {/* Header Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 border-b border-gray-200">
+      <div className="bg-gradient-to-r from-cyan-50 to-sky-50 p-6 border-b border-gray-200">
         <div className="flex items-start justify-between mb-4">
           <div className="flex-1">
             <div className="flex items-center space-x-3 mb-3">
@@ -117,13 +119,25 @@ export function ResultCard({ assessment }) {
             </div>
           </div>
 
-          <button
-            onClick={downloadJSON}
-            className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
-          >
-            <FiDownload size={18} />
-            <span className="text-sm">JSON</span>
-          </button>
+          <div className="flex items-center space-x-2">
+            <button
+              onClick={() => copyToClipboard(rawJson, 'raw-json')}
+              className="flex items-center space-x-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+              title="Copy raw JSON"
+            >
+              <FiCopy size={18} />
+              <span className="text-sm">
+                {copiedSection === 'raw-json' ? 'Copied!' : 'Copy Raw JSON'}
+              </span>
+            </button>
+            <button
+              onClick={downloadJSON}
+              className="flex items-center space-x-2 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-semibold transition-colors"
+            >
+              <FiDownload size={18} />
+              <span className="text-sm">Download JSON Report</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -143,7 +157,7 @@ export function ResultCard({ assessment }) {
             onClick={() => setExpandedSummary('clinical')}
             className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all text-sm ${
               expandedSummary === 'clinical'
-                ? 'bg-indigo-600 text-white shadow-md'
+                ? 'bg-sky-700 text-white shadow-md'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -153,7 +167,7 @@ export function ResultCard({ assessment }) {
             onClick={() => setExpandedSummary('patient')}
             className={`flex-1 py-2 px-4 rounded-lg font-semibold transition-all text-sm ${
               expandedSummary === 'patient'
-                ? 'bg-indigo-600 text-white shadow-md'
+                ? 'bg-sky-700 text-white shadow-md'
                 : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
             }`}
           >
@@ -163,12 +177,12 @@ export function ResultCard({ assessment }) {
 
         {/* Clinical Summary Section */}
         {expandedSummary === 'clinical' && (
-          <div className="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 animate-fadeIn">
+          <div className="bg-sky-50 border-2 border-sky-200 rounded-lg p-4 animate-fadeIn">
             <div className="flex items-start justify-between mb-3">
-              <h4 className="font-bold text-indigo-900 text-sm">Clinical Summary (For Healthcare Professionals)</h4>
+              <h4 className="font-bold text-sky-900 text-sm">Clinical Summary (For Healthcare Professionals)</h4>
               <button
                 onClick={() => copyToClipboard(llmExplanation.clinical_summary, 'clinical')}
-                className="text-indigo-600 hover:text-indigo-800 transition-colors"
+                className="text-sky-700 hover:text-sky-900 transition-colors"
                 title="Copy to clipboard"
               >
                 {copiedSection === 'clinical' ? (
@@ -238,7 +252,7 @@ export default function ResultsDisplay({ assessment, isLoading }) {
   if (isLoading) {
     return (
       <div className="text-center py-12">
-        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-4"></div>
+        <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-sky-700 mb-4"></div>
         <p className="text-gray-600 font-semibold">Analyzing your pharmacogenomic profile...</p>
       </div>
     );

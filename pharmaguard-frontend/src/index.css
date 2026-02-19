@@ -11,7 +11,7 @@ body {
 }
 
 .btn-primary {
-  @apply px-6 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors;
+  @apply px-6 py-2 bg-sky-700 text-white rounded-lg font-medium hover:bg-sky-800 transition-colors;
 }
 
 .btn-secondary {
@@ -51,6 +51,6 @@ body {
     file:mr-4 file:py-2 file:px-4
     file:rounded-md file:border-0
     file:text-sm file:font-semibold
-    file:bg-blue-50 file:text-blue-700
-    hover:file:bg-blue-100;
+    file:bg-sky-50 file:text-sky-700
+    hover:file:bg-sky-100;
 }
