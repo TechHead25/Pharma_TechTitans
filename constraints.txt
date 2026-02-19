@@ -1,0 +1,6 @@
+# Constraints file - only allow pre-built binary wheels
+# Prevents maturin/Rust compilation on Render
+
+# Critical: Force these to use binary wheels only
+pydantic-core>=2.0 ; python_version >= "3.11"
+cryptography>=3.0 ; python_version >= "3.11"

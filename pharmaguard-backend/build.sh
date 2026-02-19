@@ -1,13 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "Installing dependencies with binary-only mode..."
+echo "Python version:"
+python --version
 
-# Update pip and ensure we have latest build tools
+echo "Installing dependencies with pip..."
+
+# Update pip and build tools
 python -m pip install --upgrade pip setuptools wheel
 
-# Install with --only-binary to prevent compilation
-python -m pip install --only-binary :all: -r requirements-deploy.txt || \
+# Install packages - pydantic-core 2.27.0+ supports Python 3.14
 python -m pip install -r requirements-deploy.txt
 
 echo "Build complete!"

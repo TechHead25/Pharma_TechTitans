@@ -17,7 +17,7 @@ from app.database import engine, Base, SessionLocal, get_db, User, VCFRecord
 from app.auth import hash_password, verify_password, create_access_token, verify_token, TokenData
 from app.schemas import UserRegister, UserLogin, AuthResponse, UserResponse, VCFRecordCreate, VCFRecordResponse, VCFRecordDetailResponse, AdminStats, AdminUserResponse
 from sqlalchemy.orm import Session
-from sqlalchemy import func, desc, text
+from sqlalchemy import func, desc, text, inspect
 
 load_dotenv()
 
@@ -26,23 +26,37 @@ Base.metadata.create_all(bind=engine)
 
 
 def ensure_database_schema():
-    """Apply lightweight schema updates for existing SQLite databases."""
-    with engine.connect() as conn:
-        user_column_rows = conn.execute(text("PRAGMA table_info(users)")).fetchall()
-        user_column_names = {row[1] for row in user_column_rows}
-        if "email_verified" not in user_column_names:
-            conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT 0"))
-        if "email_verification_code" not in user_column_names:
-            conn.execute(text("ALTER TABLE users ADD COLUMN email_verification_code TEXT"))
-        if "email_verification_expires_at" not in user_column_names:
-            conn.execute(text("ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME"))
-
-        column_rows = conn.execute(text("PRAGMA table_info(vcf_records)")).fetchall()
-        column_names = {row[1] for row in column_rows}
-        if "vcf_content" not in column_names:
-            conn.execute(text("ALTER TABLE vcf_records ADD COLUMN vcf_content TEXT"))
-
-            conn.commit()
+    """Apply lightweight schema updates for existing databases using database-agnostic SQLAlchemy."""
+    inspector = inspect(engine)
+    
+    # Check if users table exists
+    if inspector.has_table("users"):
+        user_columns = {col['name'] for col in inspector.get_columns("users")}
+        
+        with engine.begin() as conn:
+            # Add missing columns to users table
+            if "email_verified" not in user_columns:
+                if engine.dialect.name == 'sqlite':
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT 0"))
+                else:  # PostgreSQL
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE"))
+            
+            if "email_verification_code" not in user_columns:
+                conn.execute(text("ALTER TABLE users ADD COLUMN email_verification_code TEXT"))
+            
+            if "email_verification_expires_at" not in user_columns:
+                if engine.dialect.name == 'sqlite':
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verification_expires_at DATETIME"))
+                else:  # PostgreSQL
+                    conn.execute(text("ALTER TABLE users ADD COLUMN email_verification_expires_at TIMESTAMP"))
+    
+    # Check if vcf_records table exists
+    if inspector.has_table("vcf_records"):
+        vcf_columns = {col['name'] for col in inspector.get_columns("vcf_records")}
+        
+        with engine.begin() as conn:
+            if "vcf_content" not in vcf_columns:
+                conn.execute(text("ALTER TABLE vcf_records ADD COLUMN vcf_content TEXT"))
 
 
 ensure_database_schema()
