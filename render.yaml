@@ -19,7 +19,7 @@ services:
           name: pharmaguard-db
           property: connectionString
 
-  - type: pgsql
+  - type: postgres
     name: pharmaguard-db
     ipAllowList: []
     plan: starter
