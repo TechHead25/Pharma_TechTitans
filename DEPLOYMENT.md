@@ -51,6 +51,97 @@ vercel --prod
 
 ---
 
+## 🖥️ Deploying Backend to Render (with PostgreSQL)
+
+### 1. Using Render Blueprint (Recommended - Automatic)
+The repository includes a `render.yaml` blueprint that sets up the backend with PostgreSQL automatically.
+
+**Steps:**
+1. Push code to GitHub
+2. Go to [Render Dashboard](https://dashboard.render.com)
+3. Click "New +" → "Blueprint"
+4. Paste your repo URL or connect GitHub account
+5. Render will auto-create:
+   - Web Service (Python backend)
+   - PostgreSQL database instance
+   - Auto-configured `DATABASE_URL` environment variable
+6. Add environment variables:
+   - `OPENAI_API_KEY`: Your OpenAI API key (optional)
+7. Click "Deploy"
+
+**Result:**
+- Backend URL: `https://pharmaguard-backend.onrender.com`
+- API docs: `https://pharmaguard-backend.onrender.com/docs`
+- PostgreSQL database runs alongside in same blueprint
+- Auto-migrations on deploy via SQLAlchemy `Base.metadata.create_all()`
+
+---
+
+### 2. Manual Setup (If Blueprint Not Used)
+
+**Web Service:**
+1. Click "New +" → "Web Service"
+2. Connect your GitHub repository
+3. Configure:
+   - **Name**: `pharmaguard-backend`
+   - **Root Directory**: `pharmaguard-backend`
+   - **Environment**: `Python 3.11`
+   - **Build Command**: `pip install -r requirements-deploy.txt`
+   - **Start Command**: `gunicorn -w 4 -b 0.0.0.0:$PORT app.main:app --timeout 120`
+
+**PostgreSQL Database:**
+1. Click "New +" → "PostgreSQL"
+2. Configure:
+   - **Name**: `pharmaguard-db`
+   - **PostgreSQL Version**: Latest
+3. Render will generate connection string in format: `postgresql://user:password@host:5432/database_name`
+
+**Connect Database to Web Service:**
+1. Go to Web Service settings
+2. Add environment variable:
+   - **Key**: `DATABASE_URL`
+   - **Value**: Paste the PostgreSQL connection string from the database instance
+
+**Add Secret Variables:**
+```
+OPENAI_API_KEY=your-api-key-here
+FLASK_ENV=production
+SECRET_KEY=your-secret-key-change-in-production
+```
+
+**Deploy:**
+- Click "Deploy" button or enable auto-deploy for main branch commits
+
+---
+
+### 3. Environment Variables for Render Deployment
+
+On Render dashboard, ensure these are set:
+
+```
+DATABASE_URL=postgresql://username:password@host:5432/database_name
+OPENAI_API_KEY=sk-xxxx...
+SECRET_KEY=your-secret-key-here
+FLASK_ENV=production
+ALLOWED_ORIGINS=https://your-frontend.vercel.app,https://your-frontend.onrender.com
+```
+
+---
+
+### 4. Local Development Reference
+
+For **local testing with PostgreSQL**, set environment variables in `.env`:
+```
+DATABASE_URL=postgresql://postgres:password@localhost:5432/pharmaguard_local
+```
+
+For **local SQLite** (default), leave `DATABASE_URL` empty or unset:
+```
+# Falls back to sqlite:///./pharmaguard.db
+```
+
+---
+
 ## 🖥️ Deploying Backend to Render
 
 ### Setup Steps

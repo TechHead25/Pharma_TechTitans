@@ -4,14 +4,34 @@ from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 import os
 
-# SQLite database setup
-DATABASE_URL = "sqlite:///./pharmaguard.db"
+def build_database_url() -> str:
+    """Build database URL with PostgreSQL-first strategy and SQLite fallback."""
+    explicit_url = os.getenv("DATABASE_URL", "").strip()
+    if explicit_url:
+        # Render and some providers expose postgres://; SQLAlchemy expects postgresql://
+        if explicit_url.startswith("postgres://"):
+            explicit_url = explicit_url.replace("postgres://", "postgresql://", 1)
+        return explicit_url
 
-engine = create_engine(
-    DATABASE_URL, 
-    connect_args={"check_same_thread": False},
-    echo=False
-)
+    db_host = os.getenv("DB_HOST", "").strip()
+    db_name = os.getenv("DB_NAME", "").strip()
+    db_user = os.getenv("DB_USER", "").strip()
+    db_password = os.getenv("DB_PASSWORD", "").strip()
+    db_port = os.getenv("DB_PORT", "5432").strip() or "5432"
+
+    if db_host and db_name and db_user:
+        return f"postgresql+psycopg2://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+
+    return "sqlite:///./pharmaguard.db"
+
+
+DATABASE_URL = build_database_url()
+
+engine_kwargs = {"echo": False, "pool_pre_ping": True}
+if DATABASE_URL.startswith("sqlite"):
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+
+engine = create_engine(DATABASE_URL, **engine_kwargs)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
