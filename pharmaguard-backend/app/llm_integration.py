@@ -1,17 +1,18 @@
 import os
 from typing import Dict, Optional, Tuple
-from openai import OpenAI
+import google.generativeai as genai
 
 
 class LLMExplainer:
-    """Generate dual-layer clinical explanations using LLM (OpenAI GPT)"""
+    """Generate dual-layer clinical explanations using LLM (Google Gemini)"""
     
     def __init__(self, api_key: Optional[str] = None):
-        self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
+        self.api_key = api_key or os.getenv("GEMINI_API_KEY", "")
         if self.api_key:
-            self.client = OpenAI(api_key=self.api_key)
+            genai.configure(api_key=self.api_key)
+            self.model = genai.GenerativeModel('gemini-pro')
         else:
-            self.client = None
+            self.model = None
     
     def generate_explanations(
         self,
@@ -30,7 +31,7 @@ class LLMExplainer:
             Tuple of (clinical_summary, patient_summary)
         """
         
-        if not self.client:
+        if not self.model:
             clinical, patient = self._fallback_explanations(
                 gene, drug, phenotype, risk_label, detected_variants, diplotype, current_dose_mg
             )
@@ -69,7 +70,11 @@ class LLMExplainer:
         variants_str = ", ".join(normalized_variants) if normalized_variants else "none detected"
         star_allele = diplotype.split("/")[0] if "/" in diplotype else diplotype
         
-        prompt = f"""You are a board-certified clinical pharmacologist and pharmacogenomics specialist. Generate a high-detail technical explanation (320-420 words) for healthcare professionals about the following pharmacogenomic finding:
+        system_instruction = "You are a board-certified clinical pharmacologist and pharmacogenomics specialist writing for physicians and clinical pharmacists. Use advanced medical terminology, CPIC-oriented reasoning, and mechanistic pharmacology language."
+        
+        prompt = f"""{system_instruction}
+
+Generate a high-detail technical explanation (320-420 words) for healthcare professionals about the following pharmacogenomic finding:
 
 Gene: {gene}
 Drug: {drug}
@@ -92,19 +97,14 @@ MANDATORY citation rule: You MUST explicitly include at least one RSID from [{va
 Tone requirement: Use professional medical terminology (e.g., biotransformation, bioactivation, therapeutic index, myelosuppression, hemorrhagic risk, platelet inhibition, genotype-guided dosing). Avoid lay simplifications."""
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a clinical pharmacogenomics expert writing for physicians and clinical pharmacists. Use advanced medical terminology, CPIC-oriented reasoning, and mechanistic pharmacology language."
-                    },
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=520,
-                temperature=0.45,
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=520,
+                    temperature=0.45,
+                )
             )
-            summary = response.choices[0].message.content.strip()
+            summary = response.text.strip()
             return self._ensure_variant_citation(summary, normalized_variants, star_allele)
         except Exception as e:
             print(f"Clinical summary generation error: {e}")
@@ -125,14 +125,18 @@ Tone requirement: Use professional medical terminology (e.g., biotransformation,
         variants_str = ", ".join(normalized_variants) if normalized_variants else "none detected"
         star_allele = diplotype.split("/")[0] if "/" in diplotype else diplotype
 
-        prompt = f"""You are a patient educator writing for someone with no medical background. Generate a simple, friendly explanation (150-200 words) about their pharmacogenomic result:
+        system_instruction = "You are a patient educator. Explain complex medical concepts in simple, friendly language using analogies. Make patients feel empowered, not scared."
+
+        prompt = f"""{system_instruction}
+
+Generate a simple, friendly explanation (150-200 words) about their pharmacogenomic result:
 
 Gene: {gene}
 Drug: {drug}
 Phenotype: {phenotype}
 Risk Level: {risk_label}
-    Detected RSIDs: {variants_str}
-    Star Allele: {star_allele}
+Detected RSIDs: {variants_str}
+Star Allele: {star_allele}
 
 Use simple analogies and everyday language. Explain:
 1. What this gene does (simple analogy for the enzyme role)
@@ -147,19 +151,14 @@ Use: Analogies, simple explanations, empathetic tone
 MANDATORY citation rule: Include at least one RSID (for example {normalized_variants[0] if normalized_variants else 'N/A'}) and include the STAR allele {star_allele} explicitly in plain language."""
 
         try:
-            response = self.client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {
-                        "role": "system",
-                        "content": "You are a patient educator. Explain complex medical concepts in simple, friendly language using analogies. Make patients feel empowered, not scared."
-                    },
-                    {"role": "user", "content": prompt}
-                ],
-                max_tokens=250,
-                temperature=0.7,
+            response = self.model.generate_content(
+                prompt,
+                generation_config=genai.types.GenerationConfig(
+                    max_output_tokens=250,
+                    temperature=0.7,
+                )
             )
-            summary = response.choices[0].message.content.strip()
+            summary = response.text.strip()
             return self._ensure_variant_citation(summary, normalized_variants, star_allele)
         except Exception as e:
             print(f"Patient summary generation error: {e}")

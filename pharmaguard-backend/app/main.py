@@ -607,7 +607,7 @@ def analyze_single_drug(
         detected_variants=variant_rsids,
         diplotype=diplotype,
         current_dose_mg=llm_dose_context,
-        api_key=os.getenv("OPENAI_API_KEY")
+        api_key=os.getenv("GEMINI_API_KEY")
     )
 
     if gene == "DPYD" and drug == "FLUOROURACIL" and phenotype == "Poor Metabolizer":
