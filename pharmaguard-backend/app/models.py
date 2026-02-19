@@ -23,8 +23,13 @@ class RiskAssessment(BaseModel):
 
 
 class LLMGeneratedExplanation(BaseModel):
-    clinical_summary: str = Field(description="Technical explanation for healthcare professionals")
+    summary: str = Field(description="Technical explanation for healthcare professionals")
     patient_summary: str = Field(description="Jargon-free explanation for patients")
+
+
+class ClinicalRecommendation(BaseModel):
+    action: str
+    detail: str
 
 
 class QualityMetrics(BaseModel):
@@ -37,7 +42,7 @@ class PharmaGuardResponse(BaseModel):
     timestamp: str  # ISO8601
     risk_assessment: RiskAssessment
     pharmacogenomic_profile: PharmacogenomicProfile
-    clinical_recommendation: str
+    clinical_recommendation: ClinicalRecommendation
     llm_generated_explanation: LLMGeneratedExplanation
     quality_metrics: QualityMetrics
 

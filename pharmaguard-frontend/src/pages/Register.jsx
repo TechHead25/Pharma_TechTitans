@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FiMail, FiLock, FiUser, FiAlertCircle, FiCheckCircle } from 'react-icons/fi';
+import { FiMail, FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
 import { useNavigate, Link } from 'react-router-dom';
 import appLogo from '../assets/applogo.png';
 
@@ -12,11 +12,6 @@ export default function Register() {
     confirm_password: '',
   });
   const [error, setError] = useState(null);
-  const [success, setSuccess] = useState(false);
-  const [requiresVerification, setRequiresVerification] = useState(false);
-  const [verificationCode, setVerificationCode] = useState('');
-  const [registeredEmail, setRegisteredEmail] = useState('');
-  const [devVerificationCode, setDevVerificationCode] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
 
@@ -31,7 +26,6 @@ export default function Register() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-    setSuccess(false);
     setIsLoading(true);
 
     // Validation
@@ -68,9 +62,9 @@ export default function Register() {
       }
 
       const data = await response.json();
-      setRegisteredEmail(data.email);
-      setDevVerificationCode(data.dev_verification_code || '');
-      setRequiresVerification(true);
+      localStorage.setItem('access_token', data.access_token);
+      localStorage.setItem('user', JSON.stringify(data.user));
+      navigate('/dashboard');
     } catch (err) {
       setError(err.message);
       console.error('Registration error:', err);
@@ -78,128 +72,6 @@ export default function Register() {
       setIsLoading(false);
     }
   };
-
-  const handleVerifyEmail = async (e) => {
-    e.preventDefault();
-    setError(null);
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/verify-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: registeredEmail,
-          code: verificationCode,
-        }),
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Email verification failed');
-      }
-
-      const data = await response.json();
-      localStorage.setItem('access_token', data.access_token);
-      localStorage.setItem('user', JSON.stringify(data.user));
-
-      setSuccess(true);
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1500);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendCode = async () => {
-    setError(null);
-    setIsLoading(true);
-    try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/resend-verification', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: registeredEmail }),
-      });
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.detail || 'Failed to resend verification code');
-      }
-      const data = await response.json();
-      setDevVerificationCode(data.dev_verification_code || '');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  if (requiresVerification && !success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4 py-8">
-        <div className="w-full max-w-md bg-white rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-3 text-center">Verify Your Email</h2>
-          <p className="text-gray-600 text-sm mb-4 text-center">Enter the 6-digit verification code sent to {registeredEmail}</p>
-
-          {devVerificationCode && (
-            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-700">
-              Dev verification code: <span className="font-bold">{devVerificationCode}</span>
-            </div>
-          )}
-
-          {error && (
-            <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">{error}</div>
-          )}
-
-          <form onSubmit={handleVerifyEmail} className="space-y-4">
-            <input
-              type="text"
-              value={verificationCode}
-              onChange={(e) => setVerificationCode(e.target.value)}
-              className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
-              placeholder="Enter 6-digit code"
-              required
-              disabled={isLoading}
-            />
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-gradient-to-r from-sky-700 to-cyan-700 text-white font-bold py-2.5 px-4 rounded-lg disabled:opacity-60"
-            >
-              {isLoading ? 'Verifying...' : 'Verify Email'}
-            </button>
-          </form>
-
-          <button
-            onClick={handleResendCode}
-            disabled={isLoading}
-            className="w-full mt-3 text-sky-700 hover:text-sky-800 text-sm font-semibold"
-          >
-            Resend verification code
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (success) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white rounded-xl shadow-lg p-8 text-center">
-            <FiCheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h2>
-            <p className="text-gray-600">Welcome to PharmaGuard. Redirecting to dashboard...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-cyan-50 via-sky-50 to-blue-50 flex items-center justify-center px-4 py-8">

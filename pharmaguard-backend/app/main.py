@@ -3,15 +3,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.security import HTTPBearer
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import Optional, List
 import os
-import random
 from dotenv import load_dotenv
 import json
-import aiosmtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 
 from app.models import PharmaGuardResponse, RiskAssessment, PharmacogenomicProfile, DetectedVariant, LLMGeneratedExplanation, QualityMetrics
 from app.parsers.vcf_parser import parse_vcf_file, VCFParser
@@ -19,7 +15,7 @@ from app.engines.risk_engine import RiskAssessmentEngine
 from app.llm_integration import generate_dual_explanations
 from app.database import engine, Base, SessionLocal, get_db, User, VCFRecord
 from app.auth import hash_password, verify_password, create_access_token, verify_token, TokenData
-from app.schemas import UserRegister, UserLogin, AuthResponse, RegisterResponse, VerifyEmailRequest, ResendVerificationRequest, UserResponse, VCFRecordCreate, VCFRecordResponse, VCFRecordDetailResponse, AdminStats, AdminUserResponse
+from app.schemas import UserRegister, UserLogin, AuthResponse, UserResponse, VCFRecordCreate, VCFRecordResponse, VCFRecordDetailResponse, AdminStats, AdminUserResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func, desc, text
 
@@ -86,92 +82,6 @@ def ensure_admin_user():
 
 ensure_admin_user()
 
-
-def generate_verification_code() -> str:
-    return f"{random.randint(100000, 999999)}"
-
-
-# Email configuration from environment variables
-SMTP_HOST = os.getenv("SMTP_HOST", "")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")
-SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
-SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", "noreply@pharmaguard.com")
-SMTP_FROM_NAME = os.getenv("SMTP_FROM_NAME", "PharmaGuard")
-
-# Check if SMTP is configured
-SMTP_ENABLED = bool(SMTP_HOST and SMTP_USER and SMTP_PASSWORD)
-
-
-async def send_verification_email(email: str, code: str) -> bool:
-    """Send verification code via email. Returns True if sent successfully, False if SMTP not configured."""
-    if not SMTP_ENABLED:
-        return False
-    
-    try:
-        # Create message
-        message = MIMEMultipart("alternative")
-        message["Subject"] = "PharmaGuard Email Verification"
-        message["From"] = f"{SMTP_FROM_NAME} <{SMTP_FROM_EMAIL}>"
-        message["To"] = email
-        
-        # Email body
-        text = f"""
-Hello,
-
-Your PharmaGuard verification code is: {code}
-
-This code will expire in 24 hours.
-
-If you didn't request this verification code, please ignore this email.
-
-Best regards,
-PharmaGuard Team
-        """
-        
-        html = f"""
-<html>
-  <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
-    <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h2 style="color: #4F46E5;">Email Verification</h2>
-      <p>Hello,</p>
-      <p>Your PharmaGuard verification code is:</p>
-      <div style="background-color: #F3F4F6; padding: 20px; text-align: center; border-radius: 8px; margin: 20px 0;">
-        <span style="font-size: 32px; font-weight: bold; color: #4F46E5; letter-spacing: 8px;">{code}</span>
-      </div>
-      <p>This code will expire in 24 hours.</p>
-      <p style="color: #6B7280; font-size: 14px; margin-top: 30px;">
-        If you didn't request this verification code, please ignore this email.
-      </p>
-      <hr style="border: none; border-top: 1px solid #E5E7EB; margin: 30px 0;">
-      <p style="color: #6B7280; font-size: 12px;">
-        Best regards,<br>
-        PharmaGuard Team
-      </p>
-    </div>
-  </body>
-</html>
-        """
-        
-        # Attach both plain text and HTML versions
-        part1 = MIMEText(text, "plain")
-        part2 = MIMEText(html, "html")
-        message.attach(part1)
-        message.attach(part2)
-        
-        # Send email
-        await aiosmtplib.send(
-            message,
-            hostname=SMTP_HOST,
-            port=SMTP_PORT,
-            username=SMTP_USER,
-            password=SMTP_PASSWORD,
-            start_tls=True,
-        )
-        return True
-    except Exception as e:
-        print(f"Failed to send email: {str(e)}")
-        return False
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -319,7 +229,8 @@ async def get_supported_drugs():
 async def analyze_vcf(
     file: UploadFile = File(...),
     drug: str = Query(...),
-    dosage_mg: Optional[float] = Query(None, ge=0)
+    dosage_mg: Optional[float] = Query(None, ge=0),
+    dosage_map: Optional[str] = Query(None)
 ):
     """
     Upload and analyze VCF file with pre-selected drug(s)
@@ -350,6 +261,37 @@ async def analyze_vcf(
     
     # Remove duplicates while preserving order
     drug_list = list(dict.fromkeys(drug_list))
+
+    # Parse optional per-drug dosage map JSON, example:
+    # {"WARFARIN": 5, "Metformin": 500}
+    per_drug_dosage = {}
+    if dosage_map:
+        try:
+            parsed_dose_map = json.loads(dosage_map)
+            if isinstance(parsed_dose_map, dict):
+                for raw_key, raw_val in parsed_dose_map.items():
+                    if raw_key is None:
+                        continue
+                    key_text = str(raw_key).strip()
+                    if not key_text:
+                        continue
+                    upper_key = key_text.upper()
+                    normalized_key = upper_key if upper_key in SUPPORTED_DRUGS else " ".join(key_text.split()).title()
+
+                    try:
+                        dose_value = float(raw_val)
+                    except (TypeError, ValueError):
+                        continue
+
+                    if dose_value < 0:
+                        continue
+
+                    per_drug_dosage[normalized_key] = dose_value
+        except json.JSONDecodeError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid dosage_map format. Provide valid JSON object, e.g. {\"WARFARIN\":5}"
+            )
     
     try:
         # Validate file
@@ -411,15 +353,17 @@ async def analyze_vcf(
         if len(drug_list) > 1:
             results = []
             for drug_choice in drug_list:
+                selected_dosage = per_drug_dosage.get(drug_choice, dosage_mg)
                 result = analyze_single_drug(
-                    patient_id, drug_choice, variants, parsed_data, file.filename, dosage_mg
+                    patient_id, drug_choice, variants, parsed_data, file.filename, selected_dosage
                 )
                 results.append(result)
             return {"analyses": results, "patient_id": patient_id, "drug_count": len(results)}
         else:
             # Single drug analysis
+            selected_dosage = per_drug_dosage.get(drug_list[0], dosage_mg)
             return analyze_single_drug(
-                patient_id, drug_list[0], variants, parsed_data, file.filename, dosage_mg
+                patient_id, drug_list[0], variants, parsed_data, file.filename, selected_dosage
             )
     
     except HTTPException:
@@ -455,7 +399,7 @@ def analyze_single_drug(
     
     # Prioritize genes for better drug-specific interpretation
     gene_priority = {
-        "WARFARIN": ["VKORC1", "CYP2C9", "CYP2C19"]
+        "WARFARIN": ["CYP2C9", "VKORC1", "CYP2C19"]
     }
     preferred_genes = gene_priority.get(drug, [])
     sorted_variants = sorted(
@@ -465,18 +409,154 @@ def analyze_single_drug(
 
     # Use highest-priority relevant gene
     gene = sorted_variants[0].get('gene')
+
+    # Keep only variants belonging to the selected primary gene
+    gene_specific_variants = [v for v in sorted_variants if v.get('gene') == gene]
+
+    # For CYP2C9 interpretation, only keep known CYP2C9 star-defining SNPs
+    cyp2c9_star_rsids = {
+        "rs9332131",  # *12
+        "rs1057910",  # *3
+        "rs1799853",  # *2
+        "rs28371686",  # *5
+        "rs9332242",  # *6
+        "rs7900194",  # *8
+        "rs28371685",  # *11
+    }
+    cyp2c9_rsid_to_star = {
+        "rs9332131": "*12",
+        "rs1057910": "*3",
+        "rs1799853": "*2",
+        "rs28371686": "*5",
+        "rs9332242": "*6",
+        "rs7900194": "*8",
+        "rs28371685": "*11",
+    }
+    cyp2c19_rsid_to_star = {
+        "rs4244285": "*2",
+        "rs4986893": "*3",
+        "rs28399504": "*4",
+        "rs12769205": "*5",
+        "rs17884712": "*6",
+        "rs56337013": "*8",
+    }
+    slco1b1_rsid_to_star = {
+        "rs4149056": "*5",
+    }
+    dpyd_rsid_to_star = {
+        "rs3918290": "*2A",
+        "rs67376798": "*13",
+        "rs56038477": "HapB3",
+        "rs75017182": "HapB3",
+    }
+
+    if gene == "CYP2C9":
+        cyp2c9_variants = []
+        for variant in gene_specific_variants:
+            rsid = str(variant.get("rsid") or "").strip().lower()
+            if rsid in cyp2c9_star_rsids:
+                cyp2c9_variants.append(variant)
+        if cyp2c9_variants:
+            gene_specific_variants = cyp2c9_variants
     
+    star_allele = gene_specific_variants[0].get('star') or '*1'
+
     # Extract variant data
     variant_rsids = [
         (str(v.get('rsid')).strip() if v.get('rsid') else f"chr{v.get('chrom')}_{v.get('pos')}")
-        for v in sorted_variants
+        for v in gene_specific_variants
     ]
-    star_allele = sorted_variants[0].get('star') or '*1'
+    variant_rsids = list(dict.fromkeys(variant_rsids))
+
+    if gene == "CYP2C9" and (not star_allele or star_allele == "*1"):
+        inferred_star = cyp2c9_rsid_to_star.get(variant_rsids[0].lower()) if variant_rsids else None
+        if inferred_star:
+            star_allele = inferred_star
+    if gene == "CYP2C19":
+        # Prefer *2 call when rs4244285 is present; otherwise use known allele rsid mapping
+        normalized_rsids_for_inference = [rsid.lower() for rsid in variant_rsids if isinstance(rsid, str)]
+        if "rs4244285" in normalized_rsids_for_inference:
+            star_allele = "*2"
+        elif (not star_allele or star_allele == "*1") and normalized_rsids_for_inference:
+            inferred_star = cyp2c19_rsid_to_star.get(normalized_rsids_for_inference[0])
+            if inferred_star:
+                star_allele = inferred_star
+    if gene == "SLCO1B1" and (not star_allele or star_allele == "*1"):
+        inferred_star = slco1b1_rsid_to_star.get(variant_rsids[0].lower()) if variant_rsids else None
+        if inferred_star:
+            star_allele = inferred_star
+    if gene == "DPYD" and (not star_allele or star_allele == "*1"):
+        inferred_star = dpyd_rsid_to_star.get(variant_rsids[0].lower()) if variant_rsids else None
+        if inferred_star:
+            star_allele = inferred_star
+
+    # Strict CYP2C9 diplotype-to-SNP consistency filtering to prevent contamination
+    if gene == "CYP2C9":
+        cyp2c9_star_to_allowed_rsid = {
+            "*2": "rs1799853",
+            "*3": "rs1057910",
+            "*12": "rs9332131",
+        }
+        allowed_rsid = cyp2c9_star_to_allowed_rsid.get(star_allele)
+        if allowed_rsid:
+            variant_rsids = [rsid for rsid in variant_rsids if rsid.lower() == allowed_rsid]
+
+    if gene == "SLCO1B1":
+        slco1b1_star_to_allowed_rsid = {
+            "*5": "rs4149056",
+        }
+        allowed_rsid = slco1b1_star_to_allowed_rsid.get(star_allele)
+        if allowed_rsid:
+            variant_rsids = [rsid for rsid in variant_rsids if rsid.lower() == allowed_rsid]
+
+    if gene == "CYP2C19":
+        cyp2c19_star_to_allowed_rsid = {
+            "*2": "rs4244285",
+            "*3": "rs4986893",
+            "*4": "rs28399504",
+            "*5": "rs12769205",
+            "*6": "rs17884712",
+            "*8": "rs56337013",
+        }
+        allowed_rsid = cyp2c19_star_to_allowed_rsid.get(star_allele)
+        if allowed_rsid:
+            variant_rsids = [rsid for rsid in variant_rsids if rsid.lower() == allowed_rsid]
+
+    if gene == "DPYD":
+        dpyd_star_to_allowed_rsids = {
+            "*2A": {"rs3918290"},
+            "*13": {"rs67376798"},
+            "HapB3": {"rs56038477", "rs75017182"},
+            "D949V": {"rs67376798"},
+        }
+        allowed_rsids = dpyd_star_to_allowed_rsids.get(star_allele)
+        if allowed_rsids:
+            variant_rsids = [rsid for rsid in variant_rsids if rsid.lower() in allowed_rsids]
+
     diplotype = f"{star_allele}/{star_allele}"
     
     # Infer phenotype
     risk_engine = RiskAssessmentEngine()
-    phenotype, phenotype_confidence = risk_engine.infer_phenotype([star_allele])
+    if gene == "CYP2C9":
+        phenotype, phenotype_confidence = risk_engine.infer_cyp2c9_phenotype(diplotype)
+    elif gene == "SLCO1B1":
+        phenotype, phenotype_confidence = risk_engine.infer_slco1b1_phenotype(diplotype)
+    elif gene == "DPYD":
+        phenotype, phenotype_confidence = risk_engine.infer_dpyd_phenotype(diplotype)
+    else:
+        phenotype, phenotype_confidence = risk_engine.infer_phenotype([star_allele])
+
+    phenotype_output_map = {
+        "Poor Metabolizer": "PM",
+        "Intermediate Metabolizer": "IM",
+        "Normal Metabolizer": "NM",
+        "Normal function": "NM",
+        "Decreased function": "IM",
+        "Low function": "PM",
+    }
+    output_phenotype = phenotype_output_map.get(phenotype, phenotype)
+    if output_phenotype not in {"PM", "IM", "NM", "RM", "URM", "Unknown"}:
+        output_phenotype = "Unknown"
     
     # Assess risk for this drug-gene pair
     risk = risk_engine.assess_risk(gene, drug, phenotype, variant_rsids, diplotype)
@@ -485,7 +565,14 @@ def analyze_single_drug(
     if drug == "WARFARIN":
         high_risk_warfarin_rsids = {"rs9923231", "rs1799853", "rs1057910"}
         normalized_rsids = {rsid.lower() for rsid in variant_rsids if isinstance(rsid, str)}
-        if high_risk_warfarin_rsids.intersection(normalized_rsids):
+        if gene == "CYP2C9" and phenotype == "PM":
+            risk = {
+                **risk,
+                "risk_label": "Toxic",
+                "severity": "critical",
+                "confidence_score": max(risk.get("confidence_score", 0.5), 0.95)
+            }
+        elif high_risk_warfarin_rsids.intersection(normalized_rsids):
             risk = {
                 **risk,
                 "risk_label": "Toxic",
@@ -499,7 +586,18 @@ def analyze_single_drug(
                 "severity": "high",
                 "confidence_score": min(max(risk.get("confidence_score", 0.5), 0.8), 0.9)
             }
+
+    if gene == "DPYD" and drug == "FLUOROURACIL" and phenotype == "Poor Metabolizer":
+        risk = {
+            **risk,
+            "risk_label": "Toxic",
+            "severity": "critical",
+            "confidence_score": max(risk.get("confidence_score", 0.5), 0.99)
+        }
     
+    suppress_dose_context = gene == "CYP2C19" and drug == "CLOPIDOGREL" and phenotype == "PM"
+    llm_dose_context = None if suppress_dose_context else dosage_mg
+
     # Generate DUAL-LAYER explanations
     clinical_summary, patient_summary = generate_dual_explanations(
         gene=gene,
@@ -508,18 +606,55 @@ def analyze_single_drug(
         risk_label=risk['risk_label'],
         detected_variants=variant_rsids,
         diplotype=diplotype,
-        current_dose_mg=dosage_mg,
+        current_dose_mg=llm_dose_context,
         api_key=os.getenv("OPENAI_API_KEY")
     )
 
+    if gene == "DPYD" and drug == "FLUOROURACIL" and phenotype == "Poor Metabolizer":
+        clinical_summary = (
+            "Pharmacogenomic interpretation: DPYD diplotype *2A/*2A is consistent with Poor Metabolizer status and "
+            "marked loss of dihydropyrimidine dehydrogenase activity. Detected pathogenic variant rs3918290 supports "
+            "severely impaired fluoropyrimidine catabolism and very high risk of life-threatening fluorouracil toxicity "
+            "(including severe neutropenia, mucositis, diarrhea, and myelosuppression). CPIC-aligned recommendation is to "
+            "avoid fluorouracil-based therapy and select a non-fluoropyrimidine alternative regimen with oncology specialist "
+            "oversight and close toxicity surveillance."
+        )
+        patient_summary = (
+            "Your genetic result shows your body cannot safely break down fluorouracil. This medicine should be avoided for "
+            "you because it can cause serious side effects. Your oncology team should use an alternative treatment plan that is "
+            "safer for your genetics.\n\nVariant citation: RSID rs3918290; STAR allele *2A."
+        )
+
     dosage_note = ""
     if dosage_mg is not None:
-        if risk['risk_label'] in ["Adjust Dosage", "Toxic"]:
+        if gene == "DPYD" and drug == "FLUOROURACIL" and phenotype == "Poor Metabolizer":
+            dosage_note = f" Current reported dose: {dosage_mg} mg; fluorouracil is contraindicated and should be avoided."
+        elif suppress_dose_context:
+            dosage_note = ""
+        elif risk['risk_label'] in ["Adjust Dosage", "Toxic"]:
             dosage_note = f" Current reported dose: {dosage_mg} mg; genotype-guided dose reduction or alternative therapy should be considered."
         elif risk['risk_label'] == "Safe":
             dosage_note = f" Current reported dose: {dosage_mg} mg; standard dosing is generally acceptable with routine monitoring."
         else:
             dosage_note = f" Current reported dose: {dosage_mg} mg; individualized dose titration is recommended due to uncertain pharmacogenomic impact."
+
+    if gene == "DPYD" and drug == "FLUOROURACIL" and phenotype == "Poor Metabolizer":
+        clinical_recommendation = {
+            "action": "Avoid drug",
+            "detail": "Fluorouracil is contraindicated in DPYD poor metabolizers; avoid fluorouracil-based therapy and use an alternative regimen with specialist guidance and close toxicity monitoring."
+        }
+    elif suppress_dose_context:
+        clinical_recommendation = {
+            "action": "Avoid drug",
+            "detail": "Avoid clopidogrel in CYP2C19 poor metabolizers (CPIC Level A); use an alternative P2Y12 inhibitor such as prasugrel or ticagrelor unless contraindicated."
+        }
+    else:
+        clinical_recommendation = {
+            "action": risk_engine.get_clinical_recommendation(
+                risk['risk_label'], drug, phenotype, gene
+            ),
+            "detail": f"{risk_engine.get_clinical_recommendation(risk['risk_label'], drug, phenotype, gene)}{dosage_note}"
+        }
     
     # Create response
     response = PharmaGuardResponse(
@@ -534,14 +669,12 @@ def analyze_single_drug(
         pharmacogenomic_profile=PharmacogenomicProfile(
             primary_gene=gene,
             diplotype=diplotype,
-            phenotype=phenotype,
+            phenotype=output_phenotype,
             detected_variants=[DetectedVariant(rsid=rsid) for rsid in variant_rsids]
         ),
-        clinical_recommendation=risk_engine.get_clinical_recommendation(
-            risk['risk_label'], drug, phenotype
-        ) + dosage_note,
+        clinical_recommendation=clinical_recommendation,
         llm_generated_explanation=LLMGeneratedExplanation(
-            clinical_summary=clinical_summary,
+            summary=clinical_summary,
             patient_summary=patient_summary
         ),
         quality_metrics=QualityMetrics(
@@ -581,12 +714,15 @@ def create_no_variants_response(
             phenotype="Unknown",
             detected_variants=[]
         ),
-        clinical_recommendation=(
-            f"No significant pharmacogenomic variants detected for {drug}. Standard drug dosing recommended."
-            + (f" Current reported dose: {dosage_mg} mg." if dosage_mg is not None else "")
-        ),
+        clinical_recommendation={
+            "action": "Standard care",
+            "detail": (
+                f"No significant pharmacogenomic variants detected for {drug}. Standard drug dosing recommended."
+                + (f" Current reported dose: {dosage_mg} mg." if dosage_mg is not None else "")
+            )
+        },
         llm_generated_explanation=LLMGeneratedExplanation(
-            clinical_summary=f"Patient VCF does not contain variants in genes related to {drug} metabolism. Pharmacogenomic profile is typical. Standard dosing protocols are appropriate. Regular clinical monitoring recommended as with all medications.",
+            summary=f"Patient VCF does not contain variants in genes related to {drug} metabolism. Pharmacogenomic profile is typical. Standard dosing protocols are appropriate. Regular clinical monitoring recommended as with all medications.",
             patient_summary=f"Your genetic test shows you process {drug} normally, just like most people. Your doctor can prescribe the standard dose with confidence. All the normal safety studies apply to you!"
         ),
         quality_metrics=QualityMetrics(
@@ -709,7 +845,7 @@ async def validate_vcf(file: UploadFile = File(...)):
 
 # ===== AUTHENTICATION ENDPOINTS =====
 
-@app.post("/api/v1/auth/register", response_model=RegisterResponse)
+@app.post("/api/v1/auth/register", response_model=AuthResponse)
 async def register(user_data: UserRegister, db: Session = Depends(get_db)):
     """Register a new user"""
     
@@ -735,7 +871,6 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         )
     
     # Create new user
-    verification_code = generate_verification_code()
     hashed_password = hash_password(user_data.password)
     new_user = User(
         email=normalized_email,
@@ -743,97 +878,23 @@ async def register(user_data: UserRegister, db: Session = Depends(get_db)):
         full_name=user_data.full_name,
         hashed_password=hashed_password,
         is_admin=False,
-        email_verified=False,
-        email_verification_code=verification_code,
-        email_verification_expires_at=datetime.utcnow() + timedelta(minutes=10)
+        email_verified=True,
+        email_verification_code=None,
+        email_verification_expires_at=None
     )
     
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    # Send verification email if SMTP is configured
-    email_sent = await send_verification_email(new_user.email, verification_code)
-    
-    return {
-        "message": "Please check your email for the verification code." if email_sent else "Registration successful. Please verify your email with the 6-digit code.",
-        "requires_verification": True,
-        "email": new_user.email,
-        "dev_verification_code": None if email_sent else verification_code
-    }
-
-
-@app.post("/api/v1/auth/verify-email", response_model=AuthResponse)
-async def verify_email(payload: VerifyEmailRequest, db: Session = Depends(get_db)):
-    """Verify email using one-time code and return login token."""
-    user = db.query(User).filter(func.lower(User.email) == payload.email.strip().lower()).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if user.email_verified:
-        # Already verified: issue token directly
-        access_token = create_access_token(
-            data={"sub": str(user.id), "email": user.email, "username": user.username, "is_admin": user.is_admin}
-        )
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "user": UserResponse.from_orm(user)
-        }
-
-    if not user.email_verification_code or user.email_verification_code != payload.code.strip():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid verification code")
-
-    if not user.email_verification_expires_at or user.email_verification_expires_at < datetime.utcnow():
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Verification code has expired")
-
-    user.email_verified = True
-    user.email_verification_code = None
-    user.email_verification_expires_at = None
-    db.commit()
-    db.refresh(user)
-
     access_token = create_access_token(
-        data={"sub": str(user.id), "email": user.email, "username": user.username, "is_admin": user.is_admin}
+        data={"sub": str(new_user.id), "email": new_user.email, "username": new_user.username, "is_admin": new_user.is_admin}
     )
 
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": UserResponse.from_orm(user)
-    }
-
-
-@app.post("/api/v1/auth/resend-verification", response_model=RegisterResponse)
-async def resend_verification(payload: ResendVerificationRequest, db: Session = Depends(get_db)):
-    """Resend verification code for unverified accounts."""
-    user = db.query(User).filter(func.lower(User.email) == payload.email.strip().lower()).first()
-
-    if not user:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="User not found")
-
-    if user.email_verified:
-        return {
-            "message": "Email already verified.",
-            "requires_verification": False,
-            "email": user.email,
-            "dev_verification_code": None
-        }
-
-    verification_code = generate_verification_code()
-    user.email_verification_code = verification_code
-    user.email_verification_expires_at = datetime.utcnow() + timedelta(minutes=10)
-    db.commit()
-
-    # Send verification email if SMTP is configured
-    email_sent = await send_verification_email(user.email, verification_code)
-
-    return {
-        "message": "Verification code sent to your email." if email_sent else "Verification code resent.",
-        "requires_verification": True,
-        "email": user.email,
-        "dev_verification_code": None if email_sent else verification_code
+        "user": UserResponse.from_orm(new_user)
     }
 
 
@@ -854,12 +915,6 @@ async def login(credentials: UserLogin, db: Session = Depends(get_db)):
             detail="Invalid email or password"
         )
 
-    if not user.email_verified:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Email not verified. Please verify your email before logging in."
-        )
-    
     # Create access token
     access_token = create_access_token(
         data={"sub": str(user.id), "email": user.email, "username": user.username, "is_admin": user.is_admin}

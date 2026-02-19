@@ -10,7 +10,7 @@ import '../index.css';
 function Dashboard() {
   const [selectedDrugs, setSelectedDrugs] = useState([]);
   const [otherDrugsText, setOtherDrugsText] = useState('');
-  const [dosageMg, setDosageMg] = useState('');
+  const [dosageByDrug, setDosageByDrug] = useState({});
   const [file, setFile] = useState(null);
   const [results, setResults] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -54,8 +54,16 @@ function Dashboard() {
 
       const drugsParam = allDrugs.join(',');
       const query = new URLSearchParams({ drug: drugsParam });
-      if (dosageMg !== '' && !Number.isNaN(Number(dosageMg))) {
-        query.set('dosage_mg', String(Number(dosageMg)));
+      const dosagePayload = {};
+      allDrugs.forEach((drugName) => {
+        const value = dosageByDrug[drugName];
+        if (value !== '' && value !== undefined && !Number.isNaN(Number(value))) {
+          dosagePayload[drugName] = Number(value);
+        }
+      });
+
+      if (Object.keys(dosagePayload).length > 0) {
+        query.set('dosage_map', JSON.stringify(dosagePayload));
       }
 
       const response = await fetch(`http://localhost:8000/api/v1/analyze-vcf?${query.toString()}`, {
@@ -128,7 +136,7 @@ function Dashboard() {
   const handleRestart = () => {
     setSelectedDrugs([]);
     setOtherDrugsText('');
-    setDosageMg('');
+    setDosageByDrug({});
     setFile(null);
     setResults(null);
     setError(null);
@@ -138,7 +146,7 @@ function Dashboard() {
   const handleChangeDrug = () => {
     setSelectedDrugs([]);
     setOtherDrugsText('');
-    setDosageMg('');
+    setDosageByDrug({});
     setFile(null);
     setResults(null);
     setError(null);
@@ -149,6 +157,19 @@ function Dashboard() {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     navigate('/login');
+  };
+
+  const customDrugsForDisplay = otherDrugsText
+    .split(',')
+    .map((drug) => drug.trim())
+    .filter(Boolean);
+  const allSelectedDrugs = [...new Set([...selectedDrugs, ...customDrugsForDisplay])];
+
+  const handleDosageChange = (drugName, value) => {
+    setDosageByDrug((prev) => ({
+      ...prev,
+      [drugName]: value,
+    }));
   };
 
   return (
@@ -281,29 +302,38 @@ function Dashboard() {
               </p>
             </div>
 
-            <div className="mt-4">
-              <label className="block text-sm font-semibold text-gray-700 mb-2">
-                Current Dose Intake (mg)
-              </label>
-              <input
-                type="number"
-                min="0"
-                step="0.1"
-                value={dosageMg}
-                onChange={(e) => setDosageMg(e.target.value)}
-                placeholder="e.g., 5"
-                className="w-full px-4 py-2.5 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                This will be used by the AI to suggest whether dose maintenance or adjustment is appropriate.
-              </p>
-            </div>
+            {allSelectedDrugs.length > 0 && (
+              <div className="mt-4">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Current Dose Intake per Drug (mg)
+                </label>
+                <div className="space-y-3">
+                  {allSelectedDrugs.map((drugName) => (
+                    <div key={drugName} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                      <span className="text-sm font-medium text-gray-700">{drugName}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={dosageByDrug[drugName] || ''}
+                        onChange={(e) => handleDosageChange(drugName, e.target.value)}
+                        placeholder="e.g., 5"
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  Add dosage for each medication so the AI can suggest whether each dose should be maintained or adjusted.
+                </p>
+              </div>
+            )}
             <p className="text-gray-600 text-sm mt-6 bg-blue-50 p-4 rounded-lg">
               💡 <strong>Tip:</strong> Select one or more medications you're taking or considering. Our analysis will check for genetic interactions with each drug.
             </p>
             
             {/* Continue button - only enabled when drugs are selected */}
-            {(selectedDrugs.length > 0 || otherDrugsText.trim().length > 0) && (
+            {allSelectedDrugs.length > 0 && (
               <button
                 onClick={() => setStage('file-upload')}
                 className="mt-6 w-full bg-gradient-to-r from-sky-700 to-cyan-700 hover:from-sky-800 hover:to-cyan-800 text-white font-bold py-3 px-6 rounded-lg transition-all shadow-md hover:shadow-lg"
@@ -321,11 +351,11 @@ function Dashboard() {
               <div>
                 <h2 className="text-2xl font-bold text-gray-800">Step 2: Upload Your VCF File</h2>
                 <p className="text-gray-600 text-sm mt-2">
-                  Selected medications: <span className="font-semibold text-sky-700">{[...selectedDrugs, ...otherDrugsText.split(',').map((d) => d.trim()).filter(Boolean)].join(', ')}</span>
+                  Selected medications: <span className="font-semibold text-sky-700">{allSelectedDrugs.join(', ')}</span>
                 </p>
-                {dosageMg !== '' && (
+                {Object.keys(dosageByDrug).length > 0 && (
                   <p className="text-gray-600 text-sm mt-1">
-                    Reported dose: <span className="font-semibold text-sky-700">{dosageMg} mg</span>
+                    Dosage entries: <span className="font-semibold text-sky-700">{Object.values(dosageByDrug).filter((v) => v !== '' && v !== undefined).length}</span>
                   </p>
                 )}
               </div>
@@ -344,6 +374,30 @@ function Dashboard() {
               isLoading={isLoading}
               selectedFile={file}
             />
+
+            {allSelectedDrugs.length > 0 && (
+              <div className="mt-5">
+                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                  Current Dose Intake per Drug (mg)
+                </label>
+                <div className="space-y-3">
+                  {allSelectedDrugs.map((drugName) => (
+                    <div key={`upload-dose-${drugName}`} className="grid grid-cols-1 sm:grid-cols-2 gap-2 items-center">
+                      <span className="text-sm font-medium text-gray-700">{drugName}</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.1"
+                        value={dosageByDrug[drugName] || ''}
+                        onChange={(e) => handleDosageChange(drugName, e.target.value)}
+                        placeholder="e.g., 5"
+                        className="w-full px-4 py-2 border-2 border-gray-300 rounded-lg focus:outline-none focus:border-sky-500"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {file && !isLoading && stage !== 'results' && (
               <button

@@ -36,22 +36,6 @@ class AuthResponse(BaseModel):
     user: UserResponse
 
 
-class RegisterResponse(BaseModel):
-    message: str
-    requires_verification: bool
-    email: str
-    dev_verification_code: Optional[str] = None
-
-
-class VerifyEmailRequest(BaseModel):
-    email: EmailStr
-    code: str
-
-
-class ResendVerificationRequest(BaseModel):
-    email: EmailStr
-
-
 # ===== VCF RECORD SCHEMAS =====
 class VCFRecordCreate(BaseModel):
     filename: str

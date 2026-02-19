@@ -74,6 +74,12 @@ export function ResultCard({ assessment }) {
   };
 
   const llmExplanation = assessment.llm_generated_explanation;
+  const clinicalRecommendationText =
+    typeof assessment.clinical_recommendation === 'string'
+      ? assessment.clinical_recommendation
+      : assessment.clinical_recommendation?.detail || assessment.clinical_recommendation?.action || 'No recommendation available';
+  const clinicalSummaryText = llmExplanation?.summary || llmExplanation?.clinical_summary || 'No clinical summary available';
+  const patientSummaryText = llmExplanation?.patient_summary || 'No patient summary available';
   const riskColor = getRiskColor(assessment.risk_assessment.risk_label);
   const riskIcon = getRiskIcon(assessment.risk_assessment.risk_label);
   const severityColor = getSeverityColor(assessment.risk_assessment.severity);
@@ -145,7 +151,7 @@ export function ResultCard({ assessment }) {
       <div className="px-6 py-4 bg-blue-50 border-b border-gray-200">
         <h3 className="font-bold text-gray-800 mb-2">Clinical Recommendation</h3>
         <p className="text-gray-700 text-sm leading-relaxed">
-          {assessment.clinical_recommendation}
+          {clinicalRecommendationText}
         </p>
       </div>
 
@@ -181,7 +187,7 @@ export function ResultCard({ assessment }) {
             <div className="flex items-start justify-between mb-3">
               <h4 className="font-bold text-sky-900 text-sm">Clinical Summary (For Healthcare Professionals)</h4>
               <button
-                onClick={() => copyToClipboard(llmExplanation.clinical_summary, 'clinical')}
+                onClick={() => copyToClipboard(clinicalSummaryText, 'clinical')}
                 className="text-sky-700 hover:text-sky-900 transition-colors"
                 title="Copy to clipboard"
               >
@@ -193,7 +199,7 @@ export function ResultCard({ assessment }) {
               </button>
             </div>
             <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-              {llmExplanation.clinical_summary}
+              {clinicalSummaryText}
             </p>
           </div>
         )}
@@ -204,7 +210,7 @@ export function ResultCard({ assessment }) {
             <div className="flex items-start justify-between mb-3">
               <h4 className="font-bold text-green-900 text-sm">Patient Summary (Easy to Understand)</h4>
               <button
-                onClick={() => copyToClipboard(llmExplanation.patient_summary, 'patient')}
+                onClick={() => copyToClipboard(patientSummaryText, 'patient')}
                 className="text-green-600 hover:text-green-800 transition-colors"
                 title="Copy to clipboard"
               >
@@ -216,7 +222,7 @@ export function ResultCard({ assessment }) {
               </button>
             </div>
             <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap">
-              {llmExplanation.patient_summary}
+              {patientSummaryText}
             </p>
           </div>
         )}

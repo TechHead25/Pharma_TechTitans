@@ -245,9 +245,11 @@ MANDATORY citation rule: Include at least one RSID (for example {normalized_vari
             else:
                 dose_text = f" Current dose is {current_dose_mg} mg; dose should be titrated cautiously due to uncertain genotype-drug effect."
 
+        phenotype_label = "functional status" if gene == "SLCO1B1" else "metabolizer status"
+
         clinical_fb = (
             f"Pharmacogenomic interpretation: {gene} diplotype {diplotype} (STAR allele {star_allele}) is consistent with "
-            f"{phenotype} metabolizer status. Variant evidence includes {variants_str}, supporting altered enzyme/transporter "
+            f"{phenotype} {phenotype_label}. Variant evidence includes {variants_str}, supporting altered enzyme/transporter "
             f"function with expected modification in {drug} disposition and/or bioactivation. Clinical risk category is {risk_label}. "
             f"From a CPIC-aligned perspective, implement genotype-guided prescribing with attention to exposure-response dynamics, "
             f"narrow therapeutic index considerations, and phenotype-concordant dose selection or alternative therapy when indicated. "
