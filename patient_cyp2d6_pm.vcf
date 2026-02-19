@@ -1,0 +1,11 @@
+##fileformat=VCFv4.2
+##fileDate=20260219
+##source=PharmaGuard_Patient001_CYP2D6PM
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Pharmacogene name">
+##INFO=<ID=STAR,Number=1,Type=String,Description="Star allele">
+##INFO=<ID=RS,Number=.,Type=String,Description="rsID">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+22	42126499	rs1065852	G	A	60	PASS	GENE=CYP2D6;STAR=*4;RS=rs1065852
+22	42126611	rs3892097	A	G	60	PASS	GENE=CYP2D6;STAR=*4;RS=rs3892097
+22	42128622	rs16947	C	T	60	PASS	GENE=CYP2D6;STAR=*4;RS=rs16947

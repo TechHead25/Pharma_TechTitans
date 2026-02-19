@@ -1,0 +1,10 @@
+##fileformat=VCFv4.2
+##fileDate=20260219
+##source=PharmaGuard_Patient003_TPMTPM_CRITICAL
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Pharmacogene name">
+##INFO=<ID=STAR,Number=1,Type=String,Description="Star allele">
+##INFO=<ID=RS,Number=.,Type=String,Description="rsID">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+6	18131024	rs1142345	G	A	60	PASS	GENE=TPMT;STAR=*3A;RS=rs1142345
+6	18131331	rs1800462	A	G	60	PASS	GENE=TPMT;STAR=*3A;RS=rs1800462

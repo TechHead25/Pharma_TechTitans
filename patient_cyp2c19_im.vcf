@@ -1,0 +1,10 @@
+##fileformat=VCFv4.2
+##fileDate=20260219
+##source=PharmaGuard_Patient002_CYP2C19IM
+##reference=GRCh38
+##INFO=<ID=GENE,Number=1,Type=String,Description="Pharmacogene name">
+##INFO=<ID=STAR,Number=1,Type=String,Description="Star allele">
+##INFO=<ID=RS,Number=.,Type=String,Description="rsID">
+#CHROM	POS	ID	REF	ALT	QUAL	FILTER	INFO
+10	94942278	rs4244285	G	A	60	PASS	GENE=CYP2C19;STAR=*2;RS=rs4244285
+10	94942863	rs6986785	T	C	60	PASS	GENE=CYP2C19;STAR=*2;RS=rs6986785
