@@ -2,6 +2,8 @@ import React, { useState, useRef } from 'react';
 import { FiAlertCircle, FiCheckCircle, FiLogOut, FiBarChart2, FiSettings } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import DrugSelector from '../components/DrugSelector';
+
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 import VCFUploader from '../components/VCFUploader';
 import ResultsDisplay from '../components/ResultsDisplay';
 import appLogo from '../assets/applogo.png';
@@ -66,7 +68,7 @@ function Dashboard() {
         query.set('dosage_map', JSON.stringify(dosagePayload));
       }
 
-      const response = await fetch(`http://localhost:8000/api/v1/analyze-vcf?${query.toString()}`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/analyze-vcf?${query.toString()}`, {
         method: 'POST',
         body: formData,
       });
@@ -90,7 +92,7 @@ function Dashboard() {
         if (!token) {
           console.warn('No access token found. Skipping record save.');
         } else {
-        const saveResponse = await fetch('http://localhost:8000/api/v1/records/save', {
+        const saveResponse = await fetch(`${API_BASE_URL}/api/v1/records/save`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

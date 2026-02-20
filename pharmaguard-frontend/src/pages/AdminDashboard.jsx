@@ -3,6 +3,8 @@ import { FiUsers, FiFileText, FiCheckCircle, FiXCircle, FiBarChart2, FiLogOut } 
 import { useNavigate } from 'react-router-dom';
 import appLogo from '../assets/applogo.png';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState(null);
   const [users, setUsers] = useState([]);
@@ -29,7 +31,7 @@ export default function AdminDashboard() {
     setError(null);
     try {
       // Fetch stats
-      const statsResponse = await fetch('http://localhost:8000/api/v1/admin/stats', {
+      const statsResponse = await fetch(`${API_BASE_URL}/api/v1/admin/stats`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       if (!statsResponse.ok) throw new Error('Failed to fetch stats');
@@ -37,7 +39,7 @@ export default function AdminDashboard() {
       setStats(statsData);
 
       // Fetch users
-      const usersResponse = await fetch('http://localhost:8000/api/v1/admin/users', {
+      const usersResponse = await fetch(`${API_BASE_URL}/api/v1/admin/users`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       if (!usersResponse.ok) throw new Error('Failed to fetch users');
@@ -45,7 +47,7 @@ export default function AdminDashboard() {
       setUsers(usersData);
 
       // Fetch records
-      const recordsResponse = await fetch('http://localhost:8000/api/v1/admin/records', {
+      const recordsResponse = await fetch(`${API_BASE_URL}/api/v1/admin/records`, {
         headers: { 'Authorization': `Bearer ${localStorage.getItem('access_token')}` }
       });
       if (!recordsResponse.ok) throw new Error('Failed to fetch records');

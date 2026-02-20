@@ -3,6 +3,8 @@ import { FiLogOut, FiBarChart2, FiTrendingUp } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
 import appLogo from '../assets/applogo.png';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function DataVisualizationDashboard() {
   const [userRecords, setUserRecords] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -18,7 +20,7 @@ export default function DataVisualizationDashboard() {
 
   const fetchUserRecords = async () => {
     try {
-      const response = await fetch('http://localhost:8000/api/v1/records/user', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/records/user`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         }
@@ -46,7 +48,7 @@ export default function DataVisualizationDashboard() {
   const handleViewVcf = async (record) => {
     try {
       setLoadingVcfId(record.id);
-      const response = await fetch(`http://localhost:8000/api/v1/records/${record.id}/vcf`, {
+      const response = await fetch(`${API_BASE_URL}/api/v1/records/${record.id}/vcf`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`
         }
