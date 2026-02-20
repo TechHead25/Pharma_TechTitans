@@ -4,13 +4,17 @@ PharmaGuard is a full-stack pharmacogenomics decision-support platform that conv
 
 ##  Live Demo
 
+###Important for Evaluation:
+
+-The backend is deployed on Render (free tier), which automatically suspends services after 15 minutes of no traffic. If the application takes time to load on first access, it is due to the server waking -up. Please wait briefly and refresh if needed — the system functions normally once active.
+
 ### Frontend (Vercel)
 - Production: https://pharma-tech-titans1.vercel.app
 - Register: https://pharma-tech-titans1.vercel.app/register
 - Login: https://pharma-tech-titans1.vercel.app/login
 
 ### Backend API (Render)
-- API Base URL: https://pharma-techtitans.onrender.com
+- API Base URL: https://pharma-techtitans.onrender.com 
 - Health Check: https://pharma-techtitans.onrender.com/api/v1/health
 - API Docs (Swagger): https://pharma-techtitans.onrender.com/docs
 - Supported Drugs Endpoint: https://pharma-techtitans.onrender.com/api/v1/drugs
