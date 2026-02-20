@@ -145,4 +145,6 @@ curl -X POST "http://localhost:8000/api/v1/analyze-vcf?drug=WARFARIN,CLOPIDOGREL
 
 ## Team Members
 - Shrish Patil
-- Add additional members here
+- Aditi Katti
+- Sinchana Hebaar KM
+- Priyanka B
