@@ -2,7 +2,7 @@
 
 PharmaGuard is a full-stack pharmacogenomics decision-support platform that converts raw VCF genetics data into CPIC-aligned drug risk insights, actionable clinical recommendations, and patient-friendly explanations.
 
-## 🚀 Live Demo
+##  Live Demo
 
 ### Frontend (Vercel)
 - Production: https://pharma-tech-titans1.vercel.app
@@ -18,7 +18,7 @@ PharmaGuard is a full-stack pharmacogenomics decision-support platform that conv
 ### Demo Video
 - LinkedIn: https://www.linkedin.com/ (replace with your demo video URL)
 
-## 🧠 Problem We Solve
+##  Problem We Solve
 
 Pharmacogenomic reports are often too technical, fragmented, and hard to act on quickly in real-world workflows. Clinicians need a fast and interpretable summary, while patients need clear plain-language guidance.
 
@@ -27,7 +27,7 @@ PharmaGuard bridges this gap by combining:
 - CPIC-aligned risk stratification
 - Dual explanations for both clinicians and patients
 
-## 🏆 Why PharmaGuard is Hackathon-Ready
+##  Why PharmaGuard is Hackathon-Ready
 
 - Real healthcare impact: safer prescribing and reduced adverse drug events
 - End-to-end product: upload → analyze → recommend → explain
@@ -35,7 +35,7 @@ PharmaGuard bridges this gap by combining:
 - Explainable AI layer: clinician-grade and patient-grade summaries from the same genomic context
 - Demo-friendly UX: clean workflow, instant risk labels, JSON export-ready outputs
 
-## ✨ Core Features
+##  Core Features
 
 - VCF upload and robust validation
 - Drug-first analysis flow (single or multiple drugs)
@@ -48,7 +48,7 @@ PharmaGuard bridges this gap by combining:
 - Record persistence and retrieval APIs
 - Frontend dashboard with color-coded severity and recommendations
 
-## 🧬 Supported Pharmacogenomic Scope
+##  Supported Pharmacogenomic Scope
 
 ### Genes
 - CYP2D6
@@ -66,7 +66,7 @@ PharmaGuard bridges this gap by combining:
 - AZATHIOPRINE
 - FLUOROURACIL
 
-## 🏗️ Architecture
+##  Architecture
 
 PharmaGuard uses a client-server architecture:
 
@@ -89,7 +89,7 @@ High-level flow:
 4. LLM module generates clinical and patient summaries.
 5. Structured response is returned and rendered in UI.
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 ### Frontend
 - React
@@ -114,7 +114,7 @@ High-level flow:
 - Vercel (frontend deploy)
 - Pytest (backend tests)
 
-## ⚡ Quick Start (Local)
+##  Quick Start (Local)
 
 ### Prerequisites
 - Python 3.10+
@@ -151,7 +151,7 @@ npm run dev
 Frontend local URL:
 - http://localhost:5173 (or the port Vite prints)
 
-## 🔐 Environment Variables
+##  Environment Variables
 
 ### Backend (Render / local)
 - GEMINI_API_KEY
@@ -161,7 +161,7 @@ Frontend local URL:
 ### Frontend (Vercel)
 - VITE_API_URL=https://pharma-techtitans.onrender.com
 
-## 📡 API Endpoints
+##  API Endpoints
 
 ### Core
 - POST /api/v1/validate-vcf
@@ -179,7 +179,7 @@ Frontend local URL:
 - GET /api/v1/records/user
 - GET /api/v1/records/{id}
 
-## 📘 Structured Response Schema
+##  Structured Response Schema
 
 ```json
 {
@@ -213,7 +213,7 @@ Frontend local URL:
 }
 ```
 
-## 🎯 Hackathon Judging Highlights
+##  Hackathon Judging Highlights
 
 - Innovation: combines deterministic pharmacogenomic logic with explainable LLM output
 - Technical depth: full-stack, secure auth, schema-driven APIs, deployment on cloud platforms
@@ -221,7 +221,7 @@ Frontend local URL:
 - Product readiness: live deployed frontend/backend with documented setup and API docs
 - Scalability: clean modular backend, database portability, and extensible gene-drug mapping
 
-## 🗺️ Roadmap
+##  Roadmap
 
 - Expand to additional CPIC drug-gene pairs
 - Add clinician report PDF export
@@ -229,7 +229,7 @@ Frontend local URL:
 - Introduce audit trail + explainability confidence metadata
 - Integrate EHR-compatible interoperability formats
 
-## 👥 Team
+##  Team
 
 - Shrish Patil
 - Aditi Katti
