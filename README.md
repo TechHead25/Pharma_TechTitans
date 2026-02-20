@@ -16,8 +16,8 @@ PharmaGuard is a full-stack pharmacogenomics decision-support platform that conv
 - Supported Drugs Endpoint: https://pharma-techtitans.onrender.com/api/v1/drugs
 
 ### Demo Video
-- LinkedIn: https://www.linkedin.com/ (replace with your demo video URL)
-
+- LinkedIn: https://www.linkedin.com/posts/aditi-katti-b872913b2_rift2026-pharmaguard-pharmacogenomics-ugcPost-7430430934736375808-6rIa
+- 
 ##  Problem We Solve
 
 Pharmacogenomic reports are often too technical, fragmented, and hard to act on quickly in real-world workflows. Clinicians need a fast and interpretable summary, while patients need clear plain-language guidance.
