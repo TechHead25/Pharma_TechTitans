@@ -5,6 +5,10 @@ import appLogo from '../assets/applogo.png';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
+console.log('Register component loaded');
+console.log('Environment VITE_API_URL:', import.meta.env.VITE_API_URL);
+console.log('Using API_BASE_URL:', API_BASE_URL);
+
 export default function Register() {
   const [formData, setFormData] = useState({
     email: '',
@@ -27,24 +31,33 @@ export default function Register() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    console.log('=== REGISTRATION STARTED ===');
+    console.log('API_BASE_URL:', API_BASE_URL);
+    console.log('Form data:', { email: formData.email, username: formData.username });
+    
     setError(null);
     setIsLoading(true);
 
     // Validation
     if (formData.password !== formData.confirm_password) {
+      console.error('Validation error: Passwords do not match');
       setError('Passwords do not match');
       setIsLoading(false);
       return;
     }
 
     if (formData.password.length < 8) {
+      console.error('Validation error: Password too short');
       setError('Password must be at least 8 characters long');
       setIsLoading(false);
       return;
     }
 
+    const requestUrl = `${API_BASE_URL}/api/v1/auth/register`;
+    console.log('Making request to:', requestUrl);
+
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
+      const response = await fetch(requestUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -58,20 +71,30 @@ export default function Register() {
         }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
       if (!response.ok) {
         const data = await response.json();
+        console.error('Registration failed:', data);
         throw new Error(data.detail || 'Registration failed');
       }
 
       const data = await response.json();
+      console.log('Registration successful:', data);
       localStorage.setItem('access_token', data.access_token);
       localStorage.setItem('user', JSON.stringify(data.user));
+      console.log('Navigating to dashboard...');
       navigate('/dashboard');
     } catch (err) {
+      console.error('=== REGISTRATION ERROR ===');
+      console.error('Error type:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Full error:', err);
       setError(err.message);
-      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
+      console.log('=== REGISTRATION ENDED ===');
     }
   };
 
