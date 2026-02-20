@@ -2,8 +2,18 @@
 
 PharmaGuard is a full-stack pharmacogenomics platform that analyzes VCF files and generates CPIC-aligned drug–gene risk reports.
 
-## Live Demo Link
-- Frontend: https://pharmaguard-frontend.vercel.app
+## Live Demo Links
+
+### 🌐 Frontend (Vercel)
+- **Production URL**: https://pharma-tech-titans1.vercel.app
+- **Register**: https://pharma-tech-titans1.vercel.app/register
+- **Login**: https://pharma-tech-titans1.vercel.app/login
+
+### 🔧 Backend API (Render)
+- **API Base URL**: https://pharma-techtitans.onrender.com
+- **Health Check**: https://pharma-techtitans.onrender.com/api/v1/health
+- **API Documentation**: https://pharma-techtitans.onrender.com/docs
+- **Supported Drugs**: https://pharma-techtitans.onrender.com/api/v1/drugs
 
 ## LinkedIn Video Link
 - Demo video: https://www.linkedin.com/ (replace with your project video URL)
