@@ -4,9 +4,9 @@ PharmaGuard is a full-stack pharmacogenomics decision-support platform that conv
 
 ##  Live Demo
 
-###Important for Evaluation:
+### Important for Evaluation:
 
--The backend is deployed on Render (free tier), which automatically suspends services after 15 minutes of no traffic. If the application takes time to load on first access, it is due to the server waking -up. Please wait briefly and refresh if needed — the system functions normally once active.
+The backend is deployed on Render (free tier), which automatically suspends services after 15 minutes of no traffic. If the application takes time to load on first access, it is due to the server waking -up. Please wait briefly and refresh if needed — the system functions normally once active.
 
 ### Frontend (Vercel)
 - Production: https://pharma-tech-titans1.vercel.app
