@@ -3,6 +3,8 @@ import { FiMail, FiLock, FiUser, FiAlertCircle } from 'react-icons/fi';
 import { useNavigate, Link } from 'react-router-dom';
 import appLogo from '../assets/applogo.png';
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+
 export default function Register() {
   const [formData, setFormData] = useState({
     email: '',
@@ -42,7 +44,7 @@ export default function Register() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/register', {
+      const response = await fetch(`${API_BASE_URL}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
